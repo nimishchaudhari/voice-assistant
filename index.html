@@ -318,6 +318,45 @@
             color: #cbd5e1;
         }
 
+        .mediapipe-section {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid rgba(71, 85, 105, 0.3);
+        }
+
+        .mediapipe-description {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .mediapipe-model {
+            border: 2px solid rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .mediapipe-model:hover {
+            border-color: rgba(16, 185, 129, 0.6);
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .mediapipe-model.selected {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.3);
+        }
+
+        .model-badge {
+            background: linear-gradient(45deg, #10b981, #34d399);
+            color: white;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-top: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+
         .custom-model-section {
             border-top: 1px solid rgba(71, 85, 105, 0.3);
             padding-top: 25px;
@@ -457,6 +496,33 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="mediapipe-section">
+                    <h3>🚀 MediaPipe-Powered Models (Google's Optimized Inference)</h3>
+                    <p class="mediapipe-description">These models use Google's MediaPipe for enhanced performance and efficiency.</p>
+                    
+                    <div class="model-grid">
+                        <div class="model-card mediapipe-model" data-model="gemma-2b-it" data-backend="mediapipe">
+                            <h4>Gemma 2B Instruct 🔥</h4>
+                            <p>Google's optimized Gemma via MediaPipe (~1.6GB)</p>
+                            <div class="model-stats">
+                                <span>Speed: ⚡⚡⚡⚡⚡</span>
+                                <span>Quality: ⭐⭐⭐⭐</span>
+                            </div>
+                            <div class="model-badge">MediaPipe Optimized</div>
+                        </div>
+                        
+                        <div class="model-card mediapipe-model" data-model="gemma-7b-it" data-backend="mediapipe">
+                            <h4>Gemma 7B Instruct 🔥</h4>
+                            <p>Larger Gemma model via MediaPipe (~5.2GB)</p>
+                            <div class="model-stats">
+                                <span>Speed: ⚡⚡⚡⚡</span>
+                                <span>Quality: ⭐⭐⭐⭐⭐</span>
+                            </div>
+                            <div class="model-badge">MediaPipe Optimized</div>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="custom-model-section">
                     <h3>Custom Hugging Face Model</h3>
@@ -558,6 +624,9 @@
         
         window.transformers = { pipeline, env };
     </script>
+    
+    <!-- MediaPipe LLM Integration -->
+    <script src="mediapipe-llm.js"></script>
     
     <!-- Enhanced Audio Processing -->
     <script src="audio-processor.js"></script>
@@ -1167,22 +1236,28 @@
                 const indicator = this.elements.backendIndicator;
                 const text = this.elements.backendText;
                 const status = this.modelManager.getAllModelsStatus();
-                const currentBackend = status.currentBackend;
                 
                 indicator.className = 'backend-indicator';
                 
-                switch (currentBackend) {
-                    case 'webgpu':
-                        indicator.classList.add('backend-webgpu');
-                        text.textContent = `WebGPU Backend (Hardware Accelerated)`;
-                        break;
-                    case 'wasm':
-                        indicator.classList.add('backend-webassembly');
-                        text.textContent = `WebAssembly Backend (Optimized)`;
-                        break;
-                    default:
-                        indicator.classList.add('backend-cpu');
-                        text.textContent = `CPU Backend (Fallback)`;
+                if (status.usingMediaPipe) {
+                    indicator.classList.add('backend-webgpu'); // Use green for MediaPipe
+                    text.textContent = `MediaPipe Backend (Google Optimized)`;
+                } else {
+                    const currentBackend = status.currentBackend;
+                    
+                    switch (currentBackend) {
+                        case 'webgpu':
+                            indicator.classList.add('backend-webgpu');
+                            text.textContent = `WebGPU Backend (Hardware Accelerated)`;
+                            break;
+                        case 'wasm':
+                            indicator.classList.add('backend-webassembly');
+                            text.textContent = `WebAssembly Backend (Optimized)`;
+                            break;
+                        default:
+                            indicator.classList.add('backend-cpu');
+                            text.textContent = `CPU Backend (Fallback)`;
+                    }
                 }
             }
 
@@ -1209,6 +1284,7 @@
         class ModelSelector {
             constructor() {
                 this.selectedModel = null;
+                this.selectedBackend = 'onnx'; // Default to ONNX
                 this.customModels = [];
                 this.setupEventListeners();
             }
@@ -1236,9 +1312,18 @@
                 // Select new model
                 card.classList.add('selected');
                 this.selectedModel = card.dataset.model;
+                this.selectedBackend = card.dataset.backend || 'onnx';
                 
                 // Enable start button
                 document.getElementById('start-app').disabled = false;
+                
+                // Update button text based on backend
+                const startButton = document.getElementById('start-app');
+                if (this.selectedBackend === 'mediapipe') {
+                    startButton.textContent = 'Start Voice Assistant with MediaPipe';
+                } else {
+                    startButton.textContent = 'Start Voice Assistant';
+                }
             }
 
             addCustomModel() {
@@ -1251,6 +1336,7 @@
                 const modelCard = document.createElement('div');
                 modelCard.className = 'model-card';
                 modelCard.dataset.model = modelUrl;
+                modelCard.dataset.backend = 'onnx';
                 modelCard.innerHTML = `
                     <h4>Custom Model</h4>
                     <p>${modelUrl}</p>
@@ -1282,13 +1368,15 @@
                 // Show main app
                 document.getElementById('main-app').style.display = 'block';
                 
-                // Update subtitle with selected model
+                // Update subtitle with selected model and backend
                 const modelName = this.selectedModel.split('/').pop();
+                const backendText = this.selectedBackend === 'mediapipe' ? 'MediaPipe accelerated' : 'WebGPU accelerated';
                 document.getElementById('model-subtitle').textContent = 
-                    `Real-time AI with Whisper + ${modelName} • Privacy-first • WebGPU accelerated`;
+                    `Real-time AI with Whisper + ${modelName} • Privacy-first • ${backendText}`;
                 
-                // Initialize voice assistant with selected model
+                // Initialize voice assistant with selected model and backend
                 window.selectedModel = this.selectedModel;
+                window.selectedBackend = this.selectedBackend;
                 new VoiceAssistantOptimized();
             }
         }

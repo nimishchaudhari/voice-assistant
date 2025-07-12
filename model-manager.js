@@ -25,6 +25,10 @@ class ModelManager {
         this.supportedBackends = [];
         this.currentBackend = null;
         this.isInitialized = false;
+        
+        // MediaPipe integration
+        this.mediaPipeLLM = null;
+        this.useMediaPipe = window.selectedBackend === 'mediapipe';
     }
 
     async initialize() {
@@ -44,9 +48,13 @@ class ModelManager {
             // Detect supported devices
             await this.detectSupportedDevices();
             
+            // Initialize MediaPipe LLM if available
+            await this.initializeMediaPipe();
+            
             this.isInitialized = true;
             console.log('Real AI Model Manager initialized');
             console.log('Supported devices:', this.supportedDevices);
+            console.log('MediaPipe available:', this.mediaPipeLLM !== null);
             
         } catch (error) {
             console.error('Model Manager initialization failed:', error);
@@ -82,7 +90,28 @@ class ModelManager {
         
         // Set supported backends and current backend
         this.supportedBackends = [...this.supportedDevices];
+        
+        // Add MediaPipe backend if available
+        if (typeof window.MediaPipeLLM !== 'undefined') {
+            this.supportedBackends.push('mediapipe');
+        }
+        
         this.currentBackend = bestDevice;
+    }
+
+    async initializeMediaPipe() {
+        try {
+            // Check if MediaPipe LLM is available
+            if (typeof window.MediaPipeLLM !== 'undefined') {
+                this.mediaPipeLLM = new window.MediaPipeLLM();
+                console.log('MediaPipe LLM integration available');
+            } else {
+                console.log('MediaPipe LLM not available - falling back to ONNX models');
+            }
+        } catch (error) {
+            console.warn('MediaPipe initialization failed:', error);
+            this.mediaPipeLLM = null;
+        }
     }
 
     async loadModel(modelName, progressCallback = null) {
@@ -90,6 +119,11 @@ class ModelManager {
             const config = this.config[modelName];
             if (!config) {
                 throw new Error(`Unknown model: ${modelName}`);
+            }
+
+            // Check if this should use MediaPipe
+            if (modelName === 'textgen' && this.shouldUseMediaPipe(config.modelName)) {
+                return await this.loadMediaPipeModel(config.modelName, progressCallback);
             }
 
             if (progressCallback) progressCallback(0, `Loading real ${modelName} model...`);
@@ -145,7 +179,8 @@ class ModelManager {
                 config,
                 device: deviceToUse,
                 loaded: true,
-                realModel: true
+                realModel: true,
+                backend: 'onnx'
             });
 
             if (progressCallback) progressCallback(100, `${modelName} ready! (Real AI model loaded)`);
@@ -164,6 +199,72 @@ class ModelManager {
             
             if (progressCallback) progressCallback(-1, `Failed to load ${modelName}`);
             throw error;
+        }
+    }
+
+    shouldUseMediaPipe(modelName) {
+        // Check if model is better suited for MediaPipe
+        const modelLower = modelName.toLowerCase();
+        return modelLower.includes('gemma') || this.useMediaPipe;
+    }
+
+    async loadMediaPipeModel(modelName, progressCallback = null) {
+        try {
+            if (!this.mediaPipeLLM) {
+                throw new Error('MediaPipe LLM not available');
+            }
+
+            if (progressCallback) progressCallback(0, 'Initializing MediaPipe LLM...');
+
+            // Initialize MediaPipe if not already done
+            if (!this.mediaPipeLLM.isInitialized) {
+                await this.mediaPipeLLM.initialize();
+            }
+
+            // Map model names to MediaPipe model IDs
+            const mediaPipeModelId = this.mapToMediaPipeModel(modelName);
+            
+            // Load the MediaPipe model
+            await this.mediaPipeLLM.loadModel(mediaPipeModelId, progressCallback);
+
+            // Store the MediaPipe model reference
+            this.models.set('textgen', {
+                mediaPipeLLM: this.mediaPipeLLM,
+                modelId: mediaPipeModelId,
+                config: this.config.textgen,
+                loaded: true,
+                realModel: true,
+                backend: 'mediapipe'
+            });
+
+            this.useMediaPipe = true;
+            if (progressCallback) progressCallback(100, `MediaPipe ${mediaPipeModelId} ready!`);
+            console.log(`MediaPipe model ${mediaPipeModelId} loaded successfully`);
+            return true;
+
+        } catch (error) {
+            console.error('MediaPipe model loading failed:', error);
+            if (progressCallback) progressCallback(-1, 'MediaPipe loading failed, falling back to ONNX');
+            
+            // Fallback to ONNX model
+            this.useMediaPipe = false;
+            return this.loadModel('textgen', progressCallback);
+        }
+    }
+
+    mapToMediaPipeModel(modelName) {
+        const modelLower = modelName.toLowerCase();
+        
+        if (modelLower.includes('gemma-2b') || modelLower.includes('gemma2b')) {
+            return 'gemma-2b-it';
+        } else if (modelLower.includes('gemma-7b') || modelLower.includes('gemma7b')) {
+            return 'gemma-7b-it';
+        } else if (modelLower.includes('gemma')) {
+            // Default to 2B for unknown Gemma variants
+            return 'gemma-2b-it';
+        } else {
+            // Default fallback for non-Gemma models
+            return 'gemma-2b-it';
         }
     }
 
@@ -213,7 +314,12 @@ class ModelManager {
         try {
             console.log('Running real text generation...');
             
-            // Format prompt based on model type
+            // Check if using MediaPipe backend
+            if (model.backend === 'mediapipe') {
+                return await this.runMediaPipeGeneration(model, prompt, maxTokens, streamCallback);
+            }
+            
+            // Original ONNX-based generation
             const formattedPrompt = this.formatPromptForModel(prompt, this.config.textgen.modelName);
             
             if (streamCallback) {
@@ -241,6 +347,28 @@ class ModelManager {
 
         } catch (error) {
             console.error('Real text generation failed:', error);
+            throw error;
+        }
+    }
+
+    async runMediaPipeGeneration(model, prompt, maxTokens, streamCallback) {
+        try {
+            console.log('Using MediaPipe for text generation');
+            
+            const options = {
+                maxTokens,
+                temperature: 0.7,
+                topK: 40,
+                topP: 0.9,
+                streamCallback
+            };
+
+            const response = await model.mediaPipeLLM.generateText(prompt, options);
+            console.log('MediaPipe generated response:', response);
+            return response;
+
+        } catch (error) {
+            console.error('MediaPipe generation failed:', error);
             throw error;
         }
     }
@@ -473,6 +601,13 @@ class ModelManager {
         }
         status.currentBackend = this.currentBackend;
         status.supportedBackends = this.supportedBackends;
+        status.mediaPipeAvailable = this.mediaPipeLLM !== null;
+        status.usingMediaPipe = this.useMediaPipe;
+        
+        if (this.mediaPipeLLM) {
+            status.mediaPipeInfo = this.mediaPipeLLM.getPerformanceInfo();
+        }
+        
         return status;
     }
 
@@ -524,6 +659,12 @@ class ModelManager {
         // Clean up all models
         for (const modelName of this.models.keys()) {
             this.unloadModel(modelName);
+        }
+        
+        // Clean up MediaPipe if available
+        if (this.mediaPipeLLM) {
+            this.mediaPipeLLM.cleanup();
+            this.mediaPipeLLM = null;
         }
         
         console.log('Model Manager cleaned up');
