@@ -12,7 +12,7 @@ global.window = global;
 global.navigator = { gpu: null };
 global.WebAssembly = { object: true };
 global.transformers = { pipeline: () => {}, env: {} };
-global.selectedModel = 'gemma-2b-it';
+global.selectedModel = 'gemma-3-1b-it';
 global.selectedBackend = 'mediapipe';
 
 // Load the modules using require
@@ -96,14 +96,14 @@ runner.addTest('Supported Models Configuration', () => {
         throw new Error('No supported models found');
     }
 
-    const hasGemma2B = 'gemma-2b-it' in supportedModels;
+    const hasGemma3_1B = 'gemma-3-1b-it' in supportedModels;
     const hasGemma7B = 'gemma-7b-it' in supportedModels;
     
-    if (!hasGemma2B || !hasGemma7B) {
+    if (!hasGemma3_1B || !hasGemma7B) {
         throw new Error('Missing Gemma models in configuration');
     }
 
-    return `Found ${Object.keys(supportedModels).length} supported models including Gemma 2B and 7B`;
+    return `Found ${Object.keys(supportedModels).length} supported models including Gemma 3 1B and 7B`;
 });
 
 // Test 3: Model Manager integration
@@ -114,7 +114,7 @@ runner.addTest('Model Manager Integration', () => {
 
     // Mock transformers
     global.transformers = { pipeline: () => {}, env: {} };
-    global.selectedModel = 'gemma-2b-it';
+    global.selectedModel = 'gemma-3-1b-it';
     global.selectedBackend = 'mediapipe';
 
     const modelManager = new ModelManager();
@@ -140,8 +140,8 @@ runner.addTest('Backend Selection Logic', () => {
     const modelManager = new ModelManager();
     
     // Test Gemma model detection
-    const gemmaModels = ['gemma-2b-it', 'gemma-7b-it'];
-    const xenovaGemmaModel = 'Xenova/gemma-2b'; // Should use ONNX, not MediaPipe
+    const gemmaModels = ['gemma-3-1b-it', 'gemma-7b-it'];
+    const xenovaGemmaModel = 'Xenova/gemma-3-1b'; // Should use ONNX, not MediaPipe
     const nonGemmaModel = 'Xenova/TinyLlama-1.1B-Chat-v1.0';
     
     const gemmaDetected = gemmaModels.every(model => modelManager.shouldUseMediaPipe(model));
@@ -169,10 +169,10 @@ runner.addTest('Model Mapping Logic', () => {
     const modelManager = new ModelManager();
     
     const testCases = [
-        { input: 'gemma-2b-it', expected: 'gemma-2b-it' },
+        { input: 'gemma-3-1b-it', expected: 'gemma-3-1b-it' },
         { input: 'gemma-7b-it', expected: 'gemma-7b-it' },
-        { input: 'Xenova/gemma-2b', expected: 'gemma-2b-it' },
-        { input: 'unknown-gemma', expected: 'gemma-2b-it' }
+        { input: 'Xenova/gemma-3-1b', expected: 'gemma-3-1b-it' },
+        { input: 'unknown-gemma', expected: 'gemma-3-1b-it' }
     ];
 
     for (const testCase of testCases) {
@@ -202,8 +202,10 @@ runner.addTest('MediaPipe Instance Methods', () => {
     const testPrompt = 'Hello, how are you?';
     const formattedPrompt = mediaPipe.formatPromptForGemma(testPrompt);
     
-    if (!formattedPrompt.includes('<bos><start_of_turn>user')) {
-        throw new Error('Prompt formatting for Gemma model incorrect');
+    if (!formattedPrompt.includes('<bos><start_of_turn>system') || 
+        !formattedPrompt.includes('<start_of_turn>user') ||
+        !formattedPrompt.includes('<start_of_turn>model')) {
+        throw new Error('Prompt formatting for Gemma model incorrect - missing system prompt or proper structure');
     }
 
     return 'MediaPipe instance methods working correctly';

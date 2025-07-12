@@ -10,11 +10,11 @@ class MediaPipeLLM {
         this.isInitialized = false;
         this.currentModel = null;
         this.supportedModels = {
-            'gemma-2b-it': {
-                name: 'Gemma 2B Instruct',
-                size: '~1.6GB',
-                description: 'Google\'s Gemma 2B instruction-tuned model',
-                performance: '⚡⚡⚡⚡',
+            'gemma-3-1b-it': {
+                name: 'Gemma 3 1B Instruct',
+                size: '~1.0GB',
+                description: 'Google\'s latest Gemma 3 1B instruction-tuned model',
+                performance: '⚡⚡⚡⚡⚡',
                 quality: '⭐⭐⭐⭐'
             },
             'gemma-7b-it': {
@@ -151,8 +151,8 @@ class MediaPipeLLM {
         const baseUrl = 'https://storage.googleapis.com/mediapipe-models/llm_inference/';
         
         switch (modelId) {
-            case 'gemma-2b-it':
-                return `${baseUrl}gemma-2b-it/latest/gemma-2b-it.task`;
+            case 'gemma-3-1b-it':
+                return `${baseUrl}gemma-3-1b-it/latest/gemma-3-1b-it.task`;
             case 'gemma-7b-it':
                 return `${baseUrl}gemma-7b-it/latest/gemma-7b-it.task`;
             default:
@@ -285,8 +285,11 @@ class MediaPipeLLM {
     }
 
     formatPromptForGemma(prompt) {
-        // Format prompt for Gemma instruction-tuned models
-        return `<bos><start_of_turn>user\n${prompt}<end_of_turn>\n<start_of_turn>model\n`;
+        // Enhanced system prompt and format for Gemma 3 models
+        const systemPrompt = `You are a helpful, friendly, and concise AI voice assistant. Provide clear, natural responses that are suitable for spoken conversation. Keep responses brief but informative, around 1-2 sentences unless more detail is specifically requested.`;
+        
+        // Use the updated Gemma 3 format with proper system message
+        return `<bos><start_of_turn>system\n${systemPrompt}<end_of_turn>\n<start_of_turn>user\n${prompt}<end_of_turn>\n<start_of_turn>model\n`;
     }
 
     extractResponseText(result) {

@@ -321,9 +321,26 @@ class ModelManager {
                         console.log('Successfully fell back to ONNX model');
                         return result;
                     } catch (fallbackError) {
-                        // Restore original model name and re-throw
-                        this.config.textgen.modelName = originalModelName;
-                        throw fallbackError;
+                        console.warn('Primary ONNX fallback failed, trying secondary fallback...');
+                        
+                        // Try secondary fallback
+                        const secondaryFallback = 'HuggingFaceTB/SmolLM2-135M-Instruct';
+                        this.config.textgen.modelName = secondaryFallback;
+                        
+                        try {
+                            const result = await this.loadModel('textgen', (progress, message) => {
+                                if (progressCallback) {
+                                    progressCallback(progress, `Secondary fallback: ${message}`);
+                                }
+                            });
+                            
+                            console.log('Successfully fell back to secondary ONNX model');
+                            return result;
+                        } catch (secondaryError) {
+                            // Restore original model name and re-throw
+                            this.config.textgen.modelName = originalModelName;
+                            throw new Error(`All fallback attempts failed. MediaPipe: ${error.message}, Primary ONNX: ${fallbackError.message}, Secondary ONNX: ${secondaryError.message}`);
+                        }
                     }
                 } else {
                     throw new Error(`MediaPipe model loading failed and no suitable ONNX fallback found: ${error.message}`);
@@ -339,15 +356,18 @@ class ModelManager {
         // Map MediaPipe models to suitable ONNX alternatives
         const modelLower = mediaPipeModelName.toLowerCase();
         
-        if (modelLower.includes('gemma-2b') || modelLower.includes('gemma2b')) {
-            // Fallback to a small efficient model for Gemma 2B
+        if (modelLower.includes('gemma-3-1b') || modelLower.includes('gemma3-1b')) {
+            // First try the direct ONNX version, then fallback to a small efficient model
+            return 'Xenova/gemma-3-1b-it'; // Try direct ONNX conversion first
+        } else if (modelLower.includes('gemma-2b') || modelLower.includes('gemma2b')) {
+            // Legacy Gemma 2B references - use more efficient fallback
             return 'HuggingFaceTB/SmolLM2-135M-Instruct';
         } else if (modelLower.includes('gemma-7b') || modelLower.includes('gemma7b')) {
             // Fallback to a larger model for Gemma 7B
             return 'Xenova/TinyLlama-1.1B-Chat-v1.0';
         } else if (modelLower.includes('gemma')) {
-            // Default fallback for any Gemma model
-            return 'HuggingFaceTB/SmolLM2-135M-Instruct';
+            // Default fallback for any Gemma model - try Gemma 3 1B ONNX first
+            return 'Xenova/gemma-3-1b-it';
         }
         
         // No suitable fallback found
@@ -357,16 +377,19 @@ class ModelManager {
     mapToMediaPipeModel(modelName) {
         const modelLower = modelName.toLowerCase();
         
-        if (modelLower.includes('gemma-2b') || modelLower.includes('gemma2b')) {
-            return 'gemma-2b-it';
+        if (modelLower.includes('gemma-3-1b') || modelLower.includes('gemma3-1b') || modelLower.includes('gemma-1b')) {
+            return 'gemma-3-1b-it';
+        } else if (modelLower.includes('gemma-2b') || modelLower.includes('gemma2b')) {
+            // Legacy Gemma 2B references - redirect to Gemma 3 1B
+            return 'gemma-3-1b-it';
         } else if (modelLower.includes('gemma-7b') || modelLower.includes('gemma7b')) {
             return 'gemma-7b-it';
         } else if (modelLower.includes('gemma')) {
-            // Default to 2B for unknown Gemma variants
-            return 'gemma-2b-it';
+            // Default to Gemma 3 1B for unknown Gemma variants
+            return 'gemma-3-1b-it';
         } else {
             // Default fallback for non-Gemma models
-            return 'gemma-2b-it';
+            return 'gemma-3-1b-it';
         }
     }
 
@@ -588,7 +611,8 @@ class ModelManager {
         } else if (model.includes('phi')) {
             return `<|user|>\n${prompt}<|end|>\n<|assistant|>\n`;
         } else if (model.includes('gemma')) {
-            return `<bos><start_of_turn>user\n${prompt}<end_of_turn>\n<start_of_turn>model\n`;
+            const systemPrompt = `You are a helpful, friendly, and concise AI voice assistant. Provide clear, natural responses that are suitable for spoken conversation. Keep responses brief but informative, around 1-2 sentences unless more detail is specifically requested.`;
+            return `<bos><start_of_turn>system\n${systemPrompt}<end_of_turn>\n<start_of_turn>user\n${prompt}<end_of_turn>\n<start_of_turn>model\n`;
         } else if (model.includes('llama')) {
             return `<s>[INST] ${prompt} [/INST]`;
         } else if (model.includes('gpt2') || model.includes('distilgpt2')) {

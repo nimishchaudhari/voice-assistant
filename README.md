@@ -129,7 +129,7 @@ The application loads real ONNX models from Hugging Face:
 - GPT-2: `Xenova/gpt2` (~550MB, classic)
 - SmolLM2 135M (Fast): 4-bit quantized for speed (~118MB)
 - SmolLM2 135M (Quality): Standard precision (~270MB)
-- **Gemma 2B Instruct**: Google's optimized model via MediaPipe (~1.6GB) 🚀
+- **Gemma 3 1B Instruct**: Google's latest optimized model via MediaPipe (~1.0GB) 🚀
 - **Gemma 7B Instruct**: Larger Gemma model via MediaPipe (~5.2GB) 🚀
 - Custom models: Any compatible ONNX model from Hugging Face
 

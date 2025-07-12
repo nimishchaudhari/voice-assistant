@@ -173,7 +173,7 @@
                 const supportedModels = mediaPipe.getSupportedModels();
                 
                 // Check for Gemma models
-                const hasGemma2B = 'gemma-2b-it' in supportedModels;
+                const hasGemma3_1B = 'gemma-3-1b-it' in supportedModels;
                 const hasGemma7B = 'gemma-7b-it' in supportedModels;
                 
                 if (!hasGemma2B || !hasGemma7B) {
@@ -182,7 +182,7 @@
                 }
 
                 // Check model configurations
-                const gemma2B = supportedModels['gemma-2b-it'];
+                const gemma3_1B = supportedModels['gemma-3-1b-it'];
                 const gemma7B = supportedModels['gemma-7b-it'];
                 
                 const requiredFields = ['name', 'size', 'description', 'performance', 'quality'];
@@ -208,9 +208,9 @@
                 
                 // Test Gemma model detection
                 const gemmaTests = [
-                    'gemma-2b-it',
+                    'gemma-3-1b-it',
                     'gemma-7b-it', 
-                    'Xenova/gemma-2b',
+                    'Xenova/gemma-3-1b',
                     'some-other-model'
                 ];
                 
@@ -232,10 +232,10 @@
                 }
 
                 // Test model mapping
-                const mapping2B = modelManager.mapToMediaPipeModel('gemma-2b-it');
+                const mapping3_1B = modelManager.mapToMediaPipeModel('gemma-3-1b-it');
                 const mapping7B = modelManager.mapToMediaPipeModel('gemma-7b-it');
                 
-                if (mapping2B !== 'gemma-2b-it' || mapping7B !== 'gemma-7b-it') {
+                if (mapping3_1B !== 'gemma-3-1b-it' || mapping7B !== 'gemma-7b-it') {
                     setTestResult('test4', false, 'Model mapping logic incorrect');
                     return;
                 }
@@ -260,7 +260,7 @@
                 // Create test MediaPipe model cards
                 const testDiv = document.createElement('div');
                 testDiv.innerHTML = `
-                    <div class="model-card mediapipe-model" data-model="gemma-2b-it" data-backend="mediapipe">
+                    <div class="model-card mediapipe-model" data-model="gemma-3-1b-it" data-backend="mediapipe">
                         <h4>Gemma 2B Test</h4>
                         <div class="model-badge">MediaPipe Optimized</div>
                     </div>
@@ -285,7 +285,7 @@
                 const model = mediaPipeCard.getAttribute('data-model');
                 const backend = mediaPipeCard.getAttribute('data-backend');
                 
-                if (model !== 'gemma-2b-it' || backend !== 'mediapipe') {
+                if (model !== 'gemma-3-1b-it' || backend !== 'mediapipe') {
                     setTestResult('test5', false, 'MediaPipe model data attributes incorrect');
                     return;
                 }
