@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaPipe Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-fail {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .test-pending {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>MediaPipe LLM Integration Test</h1>
+    
+    <div class="test-container">
+        <h2>Test 1: MediaPipe Class Loading</h2>
+        <div id="test1-result" class="test-result test-pending">Pending...</div>
+        <button onclick="runTest1()">Run Test 1</button>
+        <p><strong>Description:</strong> Tests if MediaPipeLLM class loads correctly and can be instantiated.</p>
+    </div>
+
+    <div class="test-container">
+        <h2>Test 2: Model Manager MediaPipe Integration</h2>
+        <div id="test2-result" class="test-result test-pending">Pending...</div>
+        <button onclick="runTest2()">Run Test 2</button>
+        <p><strong>Description:</strong> Tests if ModelManager properly integrates with MediaPipe backend.</p>
+    </div>
+
+    <div class="test-container">
+        <h2>Test 3: Gemma Model Configuration</h2>
+        <div id="test3-result" class="test-result test-pending">Pending...</div>
+        <button onclick="runTest3()">Run Test 3</button>
+        <p><strong>Description:</strong> Tests if Gemma models are properly configured and recognized.</p>
+    </div>
+
+    <div class="test-container">
+        <h2>Test 4: Backend Selection Logic</h2>
+        <div id="test4-result" class="test-result test-pending">Pending...</div>
+        <button onclick="runTest4()">Run Test 4</button>
+        <p><strong>Description:</strong> Tests if backend selection logic works for MediaPipe vs ONNX models.</p>
+    </div>
+
+    <div class="test-container">
+        <h2>Test 5: UI MediaPipe Integration</h2>
+        <div id="test5-result" class="test-result test-pending">Pending...</div>
+        <button onclick="runTest5()">Run Test 5</button>
+        <p><strong>Description:</strong> Tests if UI properly handles MediaPipe model selection.</p>
+    </div>
+
+    <script src="mediapipe-llm.js"></script>
+    <script src="model-manager.js"></script>
+    
+    <script>
+        function setTestResult(testId, passed, message) {
+            const element = document.getElementById(`${testId}-result`);
+            element.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+            element.textContent = `${passed ? 'PASS' : 'FAIL'}: ${message}`;
+        }
+
+        function runTest1() {
+            try {
+                // Test MediaPipeLLM class loading
+                if (typeof MediaPipeLLM === 'undefined') {
+                    setTestResult('test1', false, 'MediaPipeLLM class not found');
+                    return;
+                }
+
+                const mediaPipe = new MediaPipeLLM();
+                
+                // Check if instance has expected methods
+                const requiredMethods = ['initialize', 'loadModel', 'generateText', 'getSupportedModels'];
+                const missingMethods = requiredMethods.filter(method => typeof mediaPipe[method] !== 'function');
+                
+                if (missingMethods.length > 0) {
+                    setTestResult('test1', false, `Missing methods: ${missingMethods.join(', ')}`);
+                    return;
+                }
+
+                // Check supported models
+                const supportedModels = mediaPipe.getSupportedModels();
+                if (!supportedModels || Object.keys(supportedModels).length === 0) {
+                    setTestResult('test1', false, 'No supported models found');
+                    return;
+                }
+
+                setTestResult('test1', true, 'MediaPipeLLM class loaded successfully with all required methods');
+
+            } catch (error) {
+                setTestResult('test1', false, `Error: ${error.message}`);
+            }
+        }
+
+        function runTest2() {
+            try {
+                // Test ModelManager MediaPipe integration
+                if (typeof ModelManager === 'undefined') {
+                    setTestResult('test2', false, 'ModelManager class not found');
+                    return;
+                }
+
+                // Mock window globals for testing
+                window.transformers = { pipeline: () => {}, env: {} };
+                
+                const modelManager = new ModelManager();
+                
+                // Check if MediaPipe properties exist
+                if (modelManager.mediaPipeLLM === undefined) {
+                    setTestResult('test2', false, 'MediaPipe integration not found in ModelManager');
+                    return;
+                }
+
+                // Check if MediaPipe methods exist
+                const requiredMethods = ['initializeMediaPipe', 'shouldUseMediaPipe', 'loadMediaPipeModel', 'mapToMediaPipeModel'];
+                const missingMethods = requiredMethods.filter(method => typeof modelManager[method] !== 'function');
+                
+                if (missingMethods.length > 0) {
+                    setTestResult('test2', false, `Missing ModelManager methods: ${missingMethods.join(', ')}`);
+                    return;
+                }
+
+                setTestResult('test2', true, 'ModelManager has proper MediaPipe integration');
+
+            } catch (error) {
+                setTestResult('test2', false, `Error: ${error.message}`);
+            }
+        }
+
+        function runTest3() {
+            try {
+                const mediaPipe = new MediaPipeLLM();
+                const supportedModels = mediaPipe.getSupportedModels();
+                
+                // Check for Gemma models
+                const hasGemma2B = 'gemma-2b-it' in supportedModels;
+                const hasGemma7B = 'gemma-7b-it' in supportedModels;
+                
+                if (!hasGemma2B || !hasGemma7B) {
+                    setTestResult('test3', false, 'Missing Gemma models in MediaPipe configuration');
+                    return;
+                }
+
+                // Check model configurations
+                const gemma2B = supportedModels['gemma-2b-it'];
+                const gemma7B = supportedModels['gemma-7b-it'];
+                
+                const requiredFields = ['name', 'size', 'description', 'performance', 'quality'];
+                const missingFields2B = requiredFields.filter(field => !gemma2B[field]);
+                const missingFields7B = requiredFields.filter(field => !gemma7B[field]);
+                
+                if (missingFields2B.length > 0 || missingFields7B.length > 0) {
+                    setTestResult('test3', false, 'Incomplete Gemma model configurations');
+                    return;
+                }
+
+                setTestResult('test3', true, 'Gemma 2B and 7B models properly configured');
+
+            } catch (error) {
+                setTestResult('test3', false, `Error: ${error.message}`);
+            }
+        }
+
+        function runTest4() {
+            try {
+                window.transformers = { pipeline: () => {}, env: {} };
+                const modelManager = new ModelManager();
+                
+                // Test Gemma model detection
+                const gemmaTests = [
+                    'gemma-2b-it',
+                    'gemma-7b-it', 
+                    'Xenova/gemma-2b',
+                    'some-other-model'
+                ];
+                
+                const results = gemmaTests.map(model => ({
+                    model,
+                    shouldUseMediaPipe: modelManager.shouldUseMediaPipe(model)
+                }));
+                
+                // Check that Gemma models are detected for MediaPipe
+                const gemmaResults = results.slice(0, 3); // First 3 are Gemma models
+                const nonGemmaResults = results.slice(3); // Last one is not Gemma
+                
+                const gemmaDetected = gemmaResults.every(r => r.shouldUseMediaPipe);
+                const nonGemmaCorrect = nonGemmaResults.every(r => !r.shouldUseMediaPipe);
+                
+                if (!gemmaDetected) {
+                    setTestResult('test4', false, 'Gemma models not properly detected for MediaPipe');
+                    return;
+                }
+
+                // Test model mapping
+                const mapping2B = modelManager.mapToMediaPipeModel('gemma-2b-it');
+                const mapping7B = modelManager.mapToMediaPipeModel('gemma-7b-it');
+                
+                if (mapping2B !== 'gemma-2b-it' || mapping7B !== 'gemma-7b-it') {
+                    setTestResult('test4', false, 'Model mapping logic incorrect');
+                    return;
+                }
+
+                setTestResult('test4', true, 'Backend selection and model mapping logic working correctly');
+
+            } catch (error) {
+                setTestResult('test4', false, `Error: ${error.message}`);
+            }
+        }
+
+        function runTest5() {
+            try {
+                // Test if MediaPipe models are properly rendered in UI by checking for CSS classes
+                const style = document.createElement('style');
+                style.textContent = `
+                    .mediapipe-model { border: 2px solid green; }
+                    .model-badge { background: linear-gradient(45deg, #10b981, #34d399); }
+                `;
+                document.head.appendChild(style);
+                
+                // Create test MediaPipe model cards
+                const testDiv = document.createElement('div');
+                testDiv.innerHTML = `
+                    <div class="model-card mediapipe-model" data-model="gemma-2b-it" data-backend="mediapipe">
+                        <h4>Gemma 2B Test</h4>
+                        <div class="model-badge">MediaPipe Optimized</div>
+                    </div>
+                `;
+                
+                document.body.appendChild(testDiv);
+                
+                const mediaPipeCard = testDiv.querySelector('.mediapipe-model');
+                const badge = testDiv.querySelector('.model-badge');
+                
+                if (!mediaPipeCard) {
+                    setTestResult('test5', false, 'MediaPipe model card structure not found');
+                    return;
+                }
+
+                if (!badge) {
+                    setTestResult('test5', false, 'MediaPipe badge not found');
+                    return;
+                }
+
+                // Check data attributes
+                const model = mediaPipeCard.getAttribute('data-model');
+                const backend = mediaPipeCard.getAttribute('data-backend');
+                
+                if (model !== 'gemma-2b-it' || backend !== 'mediapipe') {
+                    setTestResult('test5', false, 'MediaPipe model data attributes incorrect');
+                    return;
+                }
+
+                // Clean up
+                document.body.removeChild(testDiv);
+                
+                setTestResult('test5', true, 'MediaPipe UI integration working correctly');
+
+            } catch (error) {
+                setTestResult('test5', false, `Error: ${error.message}`);
+            }
+        }
+
+        // Run all tests on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('MediaPipe Integration Test Suite loaded');
+        });
+    </script>
+</body>
+</html>

@@ -205,7 +205,18 @@ class ModelManager {
     shouldUseMediaPipe(modelName) {
         // Check if model is better suited for MediaPipe
         const modelLower = modelName.toLowerCase();
-        return modelLower.includes('gemma') || this.useMediaPipe;
+        
+        // Use MediaPipe for pure Gemma models (not ONNX versions)
+        if (modelLower.includes('gemma') && !modelLower.includes('xenova')) {
+            return true;
+        }
+        
+        // Use MediaPipe if explicitly requested
+        if (this.useMediaPipe) {
+            return true;
+        }
+        
+        return false;
     }
 
     async loadMediaPipeModel(modelName, progressCallback = null) {
