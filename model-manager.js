@@ -305,42 +305,54 @@ class ModelManager {
                 this.useMediaPipe = false;
                 
                 // Try to load equivalent ONNX model instead
-                const fallbackModel = this.getFallbackONNXModel(modelName);
-                if (fallbackModel) {
-                    console.log(`Falling back to ONNX model: ${fallbackModel}`);
+                const fallbackModels = this.getFallbackONNXModel(modelName);
+                
+                if (fallbackModels) {
+                    const modelList = Array.isArray(fallbackModels) ? fallbackModels : [fallbackModels];
                     const originalModelName = this.config.textgen.modelName;
-                    this.config.textgen.modelName = fallbackModel;
                     
-                    try {
-                        const result = await this.loadModel('textgen', (progress, message) => {
-                            if (progressCallback) {
-                                progressCallback(progress, `Fallback: ${message}`);
-                            }
-                        });
-                        
-                        console.log('Successfully fell back to ONNX model');
-                        return result;
-                    } catch (fallbackError) {
-                        console.warn('Primary ONNX fallback failed, trying secondary fallback...');
-                        
-                        // Try secondary fallback
-                        const secondaryFallback = 'HuggingFaceTB/SmolLM2-135M-Instruct';
-                        this.config.textgen.modelName = secondaryFallback;
+                    for (let i = 0; i < modelList.length; i++) {
+                        const fallbackModel = modelList[i];
+                        console.log(`Trying ONNX fallback ${i + 1}/${modelList.length}: ${fallbackModel}`);
+                        this.config.textgen.modelName = fallbackModel;
                         
                         try {
                             const result = await this.loadModel('textgen', (progress, message) => {
                                 if (progressCallback) {
-                                    progressCallback(progress, `Secondary fallback: ${message}`);
+                                    progressCallback(progress, `Fallback ${i + 1}/${modelList.length}: ${message}`);
                                 }
                             });
                             
-                            console.log('Successfully fell back to secondary ONNX model');
+                            console.log(`Successfully loaded ONNX fallback: ${fallbackModel}`);
                             return result;
-                        } catch (secondaryError) {
-                            // Restore original model name and re-throw
-                            this.config.textgen.modelName = originalModelName;
-                            throw new Error(`All fallback attempts failed. MediaPipe: ${error.message}, Primary ONNX: ${fallbackError.message}, Secondary ONNX: ${secondaryError.message}`);
+                        } catch (fallbackError) {
+                            console.warn(`ONNX fallback ${i + 1} failed: ${fallbackError.message}`);
+                            
+                            // If this is the last attempt, continue to final fallback
+                            if (i === modelList.length - 1) {
+                                break;
+                            }
                         }
+                    }
+                    
+                    // All primary fallbacks failed, try final emergency fallback
+                    console.warn('All primary fallbacks failed, trying emergency fallback...');
+                    const emergencyFallback = 'HuggingFaceTB/SmolLM2-135M-Instruct';
+                    this.config.textgen.modelName = emergencyFallback;
+                    
+                    try {
+                        const result = await this.loadModel('textgen', (progress, message) => {
+                            if (progressCallback) {
+                                progressCallback(progress, `Emergency fallback: ${message}`);
+                            }
+                        });
+                        
+                        console.log('Successfully loaded emergency fallback model');
+                        return result;
+                    } catch (emergencyError) {
+                        // Restore original model name and re-throw
+                        this.config.textgen.modelName = originalModelName;
+                        throw new Error(`All fallback attempts failed. MediaPipe: ${error.message}, Emergency fallback: ${emergencyError.message}`);
                     }
                 } else {
                     throw new Error(`MediaPipe model loading failed and no suitable ONNX fallback found: ${error.message}`);
@@ -357,17 +369,29 @@ class ModelManager {
         const modelLower = mediaPipeModelName.toLowerCase();
         
         if (modelLower.includes('gemma-3-1b') || modelLower.includes('gemma3-1b')) {
-            // First try the direct ONNX version, then fallback to a small efficient model
-            return 'Xenova/gemma-3-1b-it'; // Try direct ONNX conversion first
+            // Try multiple potential ONNX versions of Gemma 3 1B
+            // These are common patterns for ONNX model naming
+            return [
+                'onnx-community/gemma-3-1b-it-onnx',
+                'microsoft/gemma-3-1b-it-onnx',
+                'Xenova/gemma-3-1b-it',
+                'HuggingFaceTB/SmolLM2-1.7B-Instruct', // Fallback to similar sized model
+                'Xenova/TinyLlama-1.1B-Chat-v1.0'
+            ];
         } else if (modelLower.includes('gemma-2b') || modelLower.includes('gemma2b')) {
-            // Legacy Gemma 2B references - use more efficient fallback
+            // Legacy Gemma 2B references - use efficient fallback
             return 'HuggingFaceTB/SmolLM2-135M-Instruct';
         } else if (modelLower.includes('gemma-7b') || modelLower.includes('gemma7b')) {
-            // Fallback to a larger model for Gemma 7B
+            // Fallback to a capable model for Gemma 7B
             return 'Xenova/TinyLlama-1.1B-Chat-v1.0';
         } else if (modelLower.includes('gemma')) {
-            // Default fallback for any Gemma model - try Gemma 3 1B ONNX first
-            return 'Xenova/gemma-3-1b-it';
+            // Default fallback for any Gemma model
+            return [
+                'onnx-community/gemma-3-1b-it-onnx',
+                'Xenova/gemma-3-1b-it',
+                'HuggingFaceTB/SmolLM2-1.7B-Instruct',
+                'Xenova/TinyLlama-1.1B-Chat-v1.0'
+            ];
         }
         
         // No suitable fallback found
@@ -611,7 +635,7 @@ class ModelManager {
         } else if (model.includes('phi')) {
             return `<|user|>\n${prompt}<|end|>\n<|assistant|>\n`;
         } else if (model.includes('gemma')) {
-            const systemPrompt = `You are a helpful, friendly, and concise AI voice assistant. Provide clear, natural responses that are suitable for spoken conversation. Keep responses brief but informative, around 1-2 sentences unless more detail is specifically requested.`;
+            const systemPrompt = `You are an intelligent voice assistant. Respond naturally and conversationally as if speaking to a friend. Keep answers brief and to the point - aim for 1-2 sentences unless the user asks for more detail. Use simple, clear language without technical jargon. Avoid using markdown, special formatting, or numbered lists in your responses. Be helpful, friendly, and direct.`;
             return `<bos><start_of_turn>system\n${systemPrompt}<end_of_turn>\n<start_of_turn>user\n${prompt}<end_of_turn>\n<start_of_turn>model\n`;
         } else if (model.includes('llama')) {
             return `<s>[INST] ${prompt} [/INST]`;

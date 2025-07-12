@@ -285,10 +285,10 @@ class MediaPipeLLM {
     }
 
     formatPromptForGemma(prompt) {
-        // Enhanced system prompt and format for Gemma 3 models
-        const systemPrompt = `You are a helpful, friendly, and concise AI voice assistant. Provide clear, natural responses that are suitable for spoken conversation. Keep responses brief but informative, around 1-2 sentences unless more detail is specifically requested.`;
+        // Optimized system prompt for voice assistant interaction with Gemma 3 1B
+        const systemPrompt = `You are an intelligent voice assistant. Respond naturally and conversationally as if speaking to a friend. Keep answers brief and to the point - aim for 1-2 sentences unless the user asks for more detail. Use simple, clear language without technical jargon. Avoid using markdown, special formatting, or numbered lists in your responses. Be helpful, friendly, and direct.`;
         
-        // Use the updated Gemma 3 format with proper system message
+        // Use proper Gemma 3 chat format with system instruction
         return `<bos><start_of_turn>system\n${systemPrompt}<end_of_turn>\n<start_of_turn>user\n${prompt}<end_of_turn>\n<start_of_turn>model\n`;
     }
 
