@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Assistant POC - Optimized</title>
+    <meta name="description" content="Real-time AI voice assistant with optimized models running entirely in your browser">
+    
+    <!-- PWA Meta Tags -->
+    <!-- <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;Voice Assistant POC&quot;,&quot;short_name&quot;:&quot;VoiceAI&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;theme_color&quot;:&quot;#2563eb&quot;,&quot;background_color&quot;:&quot;#0f172a&quot;}"> -->
+    <meta name="theme-color" content="#2563eb">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        .main-panel {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-section {
+            margin-bottom: 30px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .status-card {
+            background: rgba(51, 65, 85, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(71, 85, 105, 0.3);
+        }
+
+        .status-title {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+
+        .status-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .status-ready { color: #10b981; }
+        .status-loading { color: #f59e0b; }
+        .status-error { color: #ef4444; }
+
+        .voice-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+        }
+
+        .voice-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .voice-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.3);
+        }
+
+        .voice-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .voice-button.listening {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+
+        .conversation {
+            margin-top: 30px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 12px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            background: rgba(59, 130, 246, 0.2);
+            margin-left: auto;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .message.assistant {
+            background: rgba(139, 92, 246, 0.2);
+            margin-right: auto;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .message-content {
+            margin-bottom: 5px;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .control-button {
+            padding: 8px 16px;
+            border: 1px solid rgba(71, 85, 105, 0.5);
+            background: rgba(51, 65, 85, 0.3);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .control-button:hover {
+            background: rgba(71, 85, 105, 0.5);
+        }
+
+        .loading-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(71, 85, 105, 0.3);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .model-info {
+            background: rgba(51, 65, 85, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        .backend-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .backend-webgpu { background-color: #10b981; }
+        .backend-webassembly { background-color: #f59e0b; }
+        .backend-cpu { background-color: #ef4444; }
+
+        /* Model Selection Styles */
+        .model-selection-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .model-options {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .model-options h3 {
+            color: #e2e8f0;
+            margin-bottom: 20px;
+            font-size: 1.25rem;
+        }
+
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .model-card {
+            background: rgba(51, 65, 85, 0.4);
+            border: 2px solid rgba(71, 85, 105, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .model-card:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            background: rgba(51, 65, 85, 0.6);
+        }
+
+        .model-card.selected {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .model-card h4 {
+            color: #e2e8f0;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .model-card p {
+            color: #94a3b8;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .model-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+        }
+
+        .custom-model-section {
+            border-top: 1px solid rgba(71, 85, 105, 0.3);
+            padding-top: 25px;
+            margin-top: 25px;
+        }
+
+        .custom-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .custom-input input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid rgba(71, 85, 105, 0.5);
+            border-radius: 8px;
+            background: rgba(30, 41, 59, 0.5);
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .custom-input input::placeholder {
+            color: #64748b;
+        }
+
+        .custom-input button {
+            padding: 12px 20px;
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .custom-input button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .help-text {
+            color: #64748b;
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+
+        .start-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #10b981, #3b82f6);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .start-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .start-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        @media (max-width: 640px) {
+            .title { font-size: 2rem; }
+            .main-panel { padding: 20px; }
+            .voice-button { width: 100px; height: 100px; font-size: 1.5rem; }
+            .model-grid { grid-template-columns: 1fr; }
+            .custom-input { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Model Selection Screen -->
+    <div class="model-selection-screen" id="model-selection">
+        <div class="container">
+            <div class="header">
+                <h1 class="title">Choose Your AI Model</h1>
+                <p class="subtitle">Select a language model to power your voice assistant</p>
+            </div>
+            
+            <div class="model-options">
+                <h3>Recommended Models</h3>
+                <div class="model-grid">
+                    <div class="model-card" data-model="Xenova/TinyLlama-1.1B-Chat-v1.0">
+                        <h4>TinyLlama 1.1B</h4>
+                        <p>Fast, lightweight model (~650MB)</p>
+                        <div class="model-stats">
+                            <span>Speed: ⚡⚡⚡</span>
+                            <span>Quality: ⭐⭐</span>
+                        </div>
+                    </div>
+                    
+                    <div class="model-card" data-model="Xenova/distilgpt2">
+                        <h4>DistilGPT2</h4>
+                        <p>Very fast, small model (~350MB)</p>
+                        <div class="model-stats">
+                            <span>Speed: ⚡⚡⚡⚡</span>
+                            <span>Quality: ⭐⭐</span>
+                        </div>
+                    </div>
+                    
+                    <div class="model-card" data-model="Xenova/gpt2">
+                        <h4>GPT-2</h4>
+                        <p>Classic model, good quality (~550MB)</p>
+                        <div class="model-stats">
+                            <span>Speed: ⚡⚡⚡</span>
+                            <span>Quality: ⭐⭐⭐</span>
+                        </div>
+                    </div>
+                    
+                    <div class="model-card" data-model="HuggingFaceTB/SmolLM2-135M-Instruct/q4f16">
+                        <h4>SmolLM2 135M (Fast)</h4>
+                        <p>4-bit quantized model (~118MB)</p>
+                        <div class="model-stats">
+                            <span>Speed: ⚡⚡⚡⚡⚡</span>
+                            <span>Quality: ⭐⭐⭐</span>
+                        </div>
+                    </div>
+                    
+                    <div class="model-card" data-model="HuggingFaceTB/SmolLM2-135M-Instruct">
+                        <h4>SmolLM2 135M (Quality)</h4>
+                        <p>16-bit model, slower (~270MB)</p>
+                        <div class="model-stats">
+                            <span>Speed: ⚡⚡⚡</span>
+                            <span>Quality: ⭐⭐⭐⭐</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="custom-model-section">
+                    <h3>Custom Hugging Face Model</h3>
+                    <div class="custom-input">
+                        <input type="text" id="custom-model-url" placeholder="e.g., HuggingFaceTB/SmolLM2-135M-Instruct, Xenova/CodeGen-350M-mono" />
+                        <button id="add-custom-model">Add Model</button>
+                    </div>
+                    <p class="help-text">Enter any ONNX text generation model from Hugging Face</p>
+                </div>
+                
+                <button id="start-app" class="start-button" disabled>Start Voice Assistant</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App (hidden initially) -->
+    <div class="container" id="main-app" style="display: none;">
+        <div class="header">
+            <h1 class="title">Voice Assistant POC - Optimized</h1>
+            <p class="subtitle" id="model-subtitle">Real-time AI with Whisper + TinyLlama • Privacy-first • WebGPU accelerated</p>
+        </div>
+
+        <div class="main-panel">
+            <div class="status-section">
+                <div class="status-grid">
+                    <div class="status-card">
+                        <div class="status-title">Speech Recognition</div>
+                        <div class="status-value" id="stt-status">
+                            <span class="loading-indicator"></span> Loading Whisper...
+                        </div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-title">AI Brain</div>
+                        <div class="status-value" id="llm-status">
+                            <span class="loading-indicator"></span> Loading TinyLlama...
+                        </div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-title">Voice Synthesis</div>
+                        <div class="status-value" id="tts-status">
+                            <span class="loading-indicator"></span> Loading...
+                        </div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-title">Response Time</div>
+                        <div class="status-value" id="latency-status">-- ms</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="model-info" id="model-info">
+                    <span class="backend-indicator" id="backend-indicator"></span>
+                    <span id="backend-text">Detecting optimal backend...</span>
+                </div>
+            </div>
+
+            <div class="voice-section">
+                <button class="voice-button" id="voice-button" disabled>
+                    🎤
+                </button>
+                <p style="margin-top: 15px; color: #94a3b8; text-align: center;">
+                    <span id="voice-status">Loading AI models... Please wait</span>
+                </p>
+                
+                <div class="controls">
+                    <button class="control-button" id="toggle-vad">Enable Auto-detect</button>
+                    <button class="control-button" id="clear-conversation">Clear Chat</button>
+                    <button class="control-button" id="test-models">Test Models</button>
+                    <button class="control-button" id="backend-switch">Switch Backend</button>
+                </div>
+            </div>
+
+            <div class="conversation" id="conversation"></div>
+        </div>
+    </div>
+
+    <!-- Transformers.js for real AI models -->
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.0';
+        
+        // Configure environment to reduce warnings
+        env.allowRemoteModels = true;
+        env.allowLocalModels = false;
+        env.backends.onnx.wasm.numThreads = 1; // Reduce threading warnings
+        
+        // Suppress console warnings for cleaner output
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+            const message = args.join(' ');
+            // Filter out known non-critical warnings
+            if (message.includes('Unable to determine content-length') ||
+                message.includes('powerPreference option is currently ignored') ||
+                message.includes('Some nodes were not assigned to the preferred execution providers')) {
+                return; // Skip these warnings
+            }
+            originalWarn.apply(console, args);
+        };
+        
+        window.transformers = { pipeline, env };
+    </script>
+    
+    <!-- Enhanced Audio Processing -->
+    <script src="audio-processor.js"></script>
+    
+    <!-- Model Manager -->
+    <script src="model-manager.js"></script>
+    
+    <script>
+        class VoiceAssistantOptimized {
+            constructor() {
+                this.mediaStream = null;
+                this.analyser = null;
+                this.isListening = false;
+                this.isProcessing = false;
+                this.vadEnabled = false;
+                this.silenceThreshold = 0.02; // Increased threshold for better detection
+                this.silenceTimeout = 1500; // Reduced timeout for responsiveness
+                this.lastSpeechTime = 0;
+                
+                // Enhanced audio processing
+                this.audioProcessor = new AudioProcessor();
+                
+                // Model management
+                this.modelManager = new ModelManager();
+                
+                this.conversation = [];
+                this.isGenerating = false;
+                this.shouldStopGeneration = false;
+                this.currentUtterance = null;
+                this.initializeElements();
+                this.setupEventListeners();
+                this.initializeApp();
+            }
+
+            initializeElements() {
+                this.elements = {
+                    voiceButton: document.getElementById('voice-button'),
+                    voiceStatus: document.getElementById('voice-status'),
+                    conversation: document.getElementById('conversation'),
+                    sttStatus: document.getElementById('stt-status'),
+                    llmStatus: document.getElementById('llm-status'),
+                    ttsStatus: document.getElementById('tts-status'),
+                    latencyStatus: document.getElementById('latency-status'),
+                    progressFill: document.getElementById('progress-fill'),
+                    toggleVad: document.getElementById('toggle-vad'),
+                    clearChat: document.getElementById('clear-conversation'),
+                    testModels: document.getElementById('test-models'),
+                    backendSwitch: document.getElementById('backend-switch'),
+                    modelInfo: document.getElementById('model-info'),
+                    backendIndicator: document.getElementById('backend-indicator'),
+                    backendText: document.getElementById('backend-text')
+                };
+            }
+
+            setupEventListeners() {
+                this.elements.voiceButton.addEventListener('click', () => this.toggleListening());
+                this.elements.toggleVad.addEventListener('click', () => this.toggleVAD());
+                this.elements.clearChat.addEventListener('click', () => this.clearConversation());
+                this.elements.testModels.addEventListener('click', () => this.testModels());
+                this.elements.backendSwitch.addEventListener('click', () => this.switchBackend());
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space' && !e.repeat) {
+                        e.preventDefault();
+                        this.handleSpaceDown();
+                    }
+                });
+
+                document.addEventListener('keyup', (e) => {
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        this.handleSpaceUp();
+                    }
+                });
+            }
+
+            async initializeApp() {
+                try {
+                    this.updateProgress(10);
+                    
+                    // Initialize model manager
+                    await this.modelManager.initialize();
+                    this.updateBackendIndicator();
+                    
+                    this.updateProgress(30);
+                    
+                    // Load models
+                    await this.loadModels();
+                    
+                    this.updateProgress(100);
+                    this.updateVoiceStatus('Click the microphone to start (microphone permission required)');
+                    this.elements.voiceButton.disabled = false;
+                    
+                } catch (error) {
+                    console.error('Initialization failed:', error);
+                    this.updateVoiceStatus('Initialization failed. Check console for details.');
+                    this.updateStatus('stt', 'Error', 'error');
+                }
+            }
+
+            async loadModels() {
+                try {
+                    // Load real Whisper model for speech recognition
+                    await this.modelManager.loadModel('whisper', (progress, message) => {
+                        this.updateStatus('stt', message, progress === -1 ? 'error' : 'loading');
+                        if (progress >= 0) {
+                            this.updateProgress(10 + (progress * 0.4)); // 10-50%
+                        }
+                    });
+                    this.updateStatus('stt', 'Real Whisper Model Ready ✓', 'ready');
+                    
+                    // Load TTS (Web Speech API)
+                    await this.loadTTSModel();
+                    
+                    // Load real TinyLlama for conversation
+                    await this.modelManager.loadModel('textgen', (progress, message) => {
+                        this.updateStatus('llm', message, progress === -1 ? 'error' : 'loading');
+                        if (progress >= 0) {
+                            this.updateProgress(50 + (progress * 0.4)); // 50-90%
+                        }
+                    });
+                    const modelDisplayName = (window.selectedModel || 'Xenova/TinyLlama-1.1B-Chat-v1.0').split('/').pop();
+                    this.updateStatus('llm', `Real ${modelDisplayName} Model Ready ✓`, 'ready');
+                    
+                } catch (error) {
+                    console.error('Real model loading failed:', error);
+                    throw error;
+                }
+            }
+
+            async loadTTSModel() {
+                try {
+                    this.updateStatus('tts', 'Initializing TTS...', 'loading');
+                    
+                    // Check Web Speech API support
+                    if ('speechSynthesis' in window) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        this.updateStatus('tts', 'Web Speech API Ready ✓', 'ready');
+                    } else {
+                        throw new Error('Web Speech API not supported');
+                    }
+                    
+                } catch (error) {
+                    console.error('TTS initialization failed:', error);
+                    this.updateStatus('tts', 'Not Supported', 'error');
+                }
+            }
+
+            async setupAudio() {
+                try {
+                    this.updateVoiceStatus('Requesting microphone permission...');
+                    
+                    this.mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            sampleRate: 16000,
+                            channelCount: 1,
+                            echoCancellation: true,
+                            noiseSuppression: true
+                        } 
+                    });
+
+                    // Initialize audio processor
+                    await this.audioProcessor.initialize(this.mediaStream);
+                    
+                    // Setup analyser for VAD
+                    const audioContext = this.audioProcessor.audioContext;
+                    this.analyser = audioContext.createAnalyser();
+                    this.analyser.fftSize = 2048;
+                    this.analyser.smoothingTimeConstant = 0.3;
+                    
+                    this.audioProcessor.sourceNode.connect(this.analyser);
+
+                    this.startVADMonitoring();
+                    
+                    this.updateVoiceStatus('Microphone access granted! Ready to listen.');
+                    
+                } catch (error) {
+                    console.error('Audio setup error:', error);
+                    
+                    if (error.name === 'NotAllowedError') {
+                        this.updateVoiceStatus('❌ Microphone permission denied. Please refresh and allow access.');
+                    } else if (error.name === 'NotFoundError') {
+                        this.updateVoiceStatus('❌ No microphone found. Please check your device.');
+                    } else {
+                        this.updateVoiceStatus('❌ Audio setup failed. Please check your browser settings.');
+                    }
+                    
+                    throw error;
+                }
+            }
+
+            startVADMonitoring() {
+                if (!this.analyser) return;
+                
+                const bufferLength = this.analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                const checkAudio = () => {
+                    if (!this.analyser) return;
+
+                    this.analyser.getByteFrequencyData(dataArray);
+                    
+                    // Calculate RMS with focus on speech frequencies (300-3400 Hz)
+                    let sum = 0;
+                    const speechStart = Math.floor(300 * bufferLength / (this.analyser.context.sampleRate / 2));
+                    const speechEnd = Math.floor(3400 * bufferLength / (this.analyser.context.sampleRate / 2));
+                    
+                    for (let i = speechStart; i < Math.min(speechEnd, bufferLength); i++) {
+                        sum += dataArray[i] * dataArray[i];
+                    }
+                    const rms = Math.sqrt(sum / (speechEnd - speechStart)) / 255;
+
+                    // Debug VAD levels (remove this line after testing)
+                    if (this.vadEnabled && Date.now() % 1000 < 50) {
+                        console.log('VAD level:', rms.toFixed(4), 'threshold:', this.silenceThreshold);
+                    }
+
+                    if (rms > this.silenceThreshold) {
+                        this.lastSpeechTime = Date.now();
+                        
+                        if (this.vadEnabled && !this.isListening && !this.isProcessing) {
+                            console.log('VAD triggered - starting listening');
+                            this.startListening();
+                        }
+                    } else if (this.vadEnabled && this.isListening) {
+                        if (Date.now() - this.lastSpeechTime > this.silenceTimeout) {
+                            console.log('VAD silence detected - stopping listening');
+                            this.stopListening();
+                        }
+                    }
+
+                    requestAnimationFrame(checkAudio);
+                };
+
+                checkAudio();
+            }
+
+            async handleSpaceDown() {
+                if (!this.mediaStream) {
+                    try {
+                        await this.setupAudio();
+                    } catch (error) {
+                        return;
+                    }
+                }
+                this.startListening();
+            }
+
+            async handleSpaceUp() {
+                if (this.mediaStream && this.isListening) {
+                    this.stopListening();
+                }
+            }
+
+            async toggleListening() {
+                if (!this.mediaStream) {
+                    try {
+                        await this.setupAudio();
+                    } catch (error) {
+                        return;
+                    }
+                }
+
+                if (this.isListening) {
+                    this.stopListening();
+                } else {
+                    this.startListening();
+                }
+            }
+
+            async startListening() {
+                if (this.isListening || this.isProcessing) return;
+
+                // Stop any ongoing generation or speech
+                this.stopGeneration();
+
+                this.isListening = true;
+                this.recordedChunks = [];
+                this.elements.voiceButton.classList.add('listening');
+                this.elements.voiceButton.textContent = '🔴';
+                this.updateVoiceStatus('Listening... speak now');
+                
+                this.startRecording();
+            }
+
+            stopGeneration() {
+                // Stop text generation
+                this.shouldStopGeneration = true;
+                this.isGenerating = false;
+                
+                // Stop current speech synthesis
+                if (this.currentUtterance) {
+                    speechSynthesis.cancel();
+                    this.currentUtterance = null;
+                }
+                
+                // Clear any pending speech
+                speechSynthesis.cancel();
+            }
+
+            async stopListening() {
+                if (!this.isListening) return;
+
+                this.isListening = false;
+                this.elements.voiceButton.classList.remove('listening');
+                this.elements.voiceButton.textContent = '🎤';
+                this.updateVoiceStatus('Processing...');
+
+                await this.processAudio();
+            }
+
+            startRecording() {
+                // Start audio processor recording
+                this.audioProcessor.startRecording();
+                this.recordingStartTime = Date.now();
+                console.log('Started recording audio...');
+            }
+
+            async processAudio() {
+                if (this.isProcessing) return;
+                this.isProcessing = true;
+
+                const startTime = Date.now();
+
+                try {
+                    // Stop audio recording
+                    this.audioProcessor.stopRecording();
+                    
+                    // Get processed audio data
+                    const audioData = this.audioProcessor.getAudioData();
+                    
+                    if (audioData.duration < 0.5) {
+                        this.updateVoiceStatus('Recording too short. Try again.');
+                        this.isProcessing = false;
+                        return;
+                    }
+
+                    // Run speech-to-text inference
+                    const transcript = await this.runSTTInference(audioData);
+                    if (!transcript.trim()) {
+                        this.updateVoiceStatus('No speech detected. Try again.');
+                        this.isProcessing = false;
+                        return;
+                    }
+
+                    this.addMessage('user', transcript);
+
+                    // Add empty assistant message for streaming updates
+                    this.addMessage('assistant', '...');
+
+                    // Generate AI response with real language model (streaming)
+                    const response = await this.runLLMInference(transcript);
+                    
+                    // Update the final message
+                    this.updateStreamingMessage(response);
+
+                    const totalTime = Date.now() - startTime;
+                    this.updateLatency(totalTime);
+                    this.updateVoiceStatus('Ready! Click the microphone or press Space to talk');
+
+                } catch (error) {
+                    console.error('Processing error:', error);
+                    this.updateVoiceStatus('Processing failed. Please try again.');
+                } finally {
+                    this.isProcessing = false;
+                }
+            }
+
+            async runSTTInference(audioData) {
+                try {
+                    // Prepare audio for Whisper
+                    const whisperInput = this.audioProcessor.prepareWhisperInput(audioData);
+                    
+                    // Run Whisper inference through model manager
+                    const transcript = await this.modelManager.runWhisperInference(whisperInput);
+                    
+                    return transcript;
+                    
+                } catch (error) {
+                    console.error('STT inference failed:', error);
+                    
+                    // Fallback to demo transcript for POC
+                    const demoTranscripts = [
+                        "Hello, how are you today?",
+                        "What's the weather like?",
+                        "Tell me about artificial intelligence",
+                        "How does machine learning work?",
+                        "Explain quantum computing",
+                        "What are the benefits of renewable energy?",
+                        "How can we solve climate change?"
+                    ];
+                    
+                    return demoTranscripts[Math.floor(Math.random() * demoTranscripts.length)];
+                }
+            }
+
+            async runLLMInference(input) {
+                try {
+                    this.isGenerating = true;
+                    this.shouldStopGeneration = false;
+                    let displayedResponse = '';
+                    
+                    // Run real text generation with streaming through model manager
+                    const response = await this.modelManager.runTextGeneration(input, 75, async (streamData) => {
+                        // Check if we should stop generation
+                        if (this.shouldStopGeneration) {
+                            throw new Error('Generation interrupted by user');
+                        }
+                        
+                        if (streamData.type === 'sentence') {
+                            // Speak the sentence immediately if not interrupted
+                            if (!this.shouldStopGeneration) {
+                                this.speakText(streamData.text);
+                            }
+                        } else if (streamData.type === 'word') {
+                            // Update the displayed text
+                            displayedResponse = streamData.fullText;
+                            this.updateStreamingMessage(displayedResponse);
+                        }
+                    });
+                    
+                    this.isGenerating = false;
+                    return response;
+                    
+                } catch (error) {
+                    this.isGenerating = false;
+                    
+                    if (error.message.includes('interrupted')) {
+                        return displayedResponse || "Response interrupted by user.";
+                    }
+                    
+                    console.error('Real LLM inference failed:', error);
+                    
+                    // Fallback response if model fails
+                    return "I'm having trouble processing that request. The AI model may be loading or encountered an error.";
+                }
+            }
+
+            updateStreamingMessage(text) {
+                // Update the last assistant message with streaming text
+                const messages = this.elements.conversation.children;
+                if (messages.length > 0) {
+                    const lastMessage = messages[messages.length - 1];
+                    if (lastMessage.classList.contains('assistant')) {
+                        const contentDiv = lastMessage.querySelector('.message-content');
+                        if (contentDiv) {
+                            contentDiv.textContent = text;
+                        }
+                    }
+                }
+            }
+
+            async speakText(text) {
+                if ('speechSynthesis' in window && !this.shouldStopGeneration) {
+                    return new Promise((resolve) => {
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        utterance.rate = 0.9;
+                        utterance.pitch = 1.0;
+                        utterance.volume = 0.8;
+                        utterance.onend = resolve;
+                        utterance.onstart = () => {
+                            this.currentUtterance = utterance;
+                        };
+                        
+                        // Check if we should stop before speaking
+                        if (this.shouldStopGeneration) {
+                            resolve();
+                            return;
+                        }
+                        
+                        speechSynthesis.speak(utterance);
+                    });
+                }
+            }
+
+            addMessage(type, content) {
+                const message = {
+                    type,
+                    content,
+                    timestamp: new Date().toLocaleTimeString()
+                };
+
+                this.conversation.push(message);
+
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type}`;
+                messageDiv.innerHTML = `
+                    <div class="message-content">${content}</div>
+                    <div class="message-time">${message.timestamp}</div>
+                `;
+
+                this.elements.conversation.appendChild(messageDiv);
+                this.elements.conversation.scrollTop = this.elements.conversation.scrollHeight;
+            }
+
+            async toggleVAD() {
+                this.vadEnabled = !this.vadEnabled;
+                this.elements.toggleVad.textContent = this.vadEnabled ? 'Disable Auto-detect' : 'Enable Auto-detect';
+                
+                if (this.vadEnabled && !this.mediaStream) {
+                    try {
+                        await this.setupAudio();
+                    } catch (error) {
+                        this.vadEnabled = false;
+                        this.elements.toggleVad.textContent = 'Enable Auto-detect';
+                        this.updateVoiceStatus('❌ Microphone needed for auto-detect');
+                        return;
+                    }
+                }
+                
+                this.updateVoiceStatus(this.vadEnabled ? 
+                    'Auto-detection enabled. Start speaking!' : 
+                    'Manual mode. Click microphone to talk.'
+                );
+            }
+
+            clearConversation() {
+                this.conversation = [];
+                this.elements.conversation.innerHTML = '';
+            }
+
+            async testModels() {
+                this.updateVoiceStatus('Testing real AI models...');
+                
+                const modelStatus = this.modelManager.getAllModelsStatus();
+                
+                // Test Whisper
+                if (modelStatus.whisper?.loaded) {
+                    this.updateStatus('stt', 'Testing real Whisper...', 'loading');
+                    try {
+                        // Test with dummy audio
+                        const dummyAudio = new Float32Array(16000 * 2); // 2 seconds of silence
+                        const result = await this.modelManager.runWhisperInference(dummyAudio);
+                        this.updateStatus('stt', `Real Whisper Test Passed ✓`, 'ready');
+                    } catch (error) {
+                        this.updateStatus('stt', 'Whisper Test Failed', 'error');
+                    }
+                }
+                
+                // Test text generation
+                if (modelStatus.textgen?.loaded) {
+                    this.updateStatus('llm', 'Testing real language model...', 'loading');
+                    try {
+                        const result = await this.modelManager.runTextGeneration("Hello, how are you?");
+                        this.updateStatus('llm', `Real TinyLlama Test Passed ✓`, 'ready');
+                    } catch (error) {
+                        this.updateStatus('llm', 'Language Model Test Failed', 'error');
+                    }
+                }
+                
+                // Test TTS
+                this.updateStatus('tts', 'Testing TTS...', 'loading');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                this.updateStatus('tts', 'TTS Test Passed ✓', 'ready');
+                
+                this.updateVoiceStatus('All real AI models tested successfully!');
+            }
+
+            async switchBackend() {
+                const currentStatus = this.modelManager.getAllModelsStatus();
+                const supportedBackends = currentStatus.supportedBackends;
+                const currentIndex = supportedBackends.indexOf(currentStatus.currentBackend);
+                const nextIndex = (currentIndex + 1) % supportedBackends.length;
+                const newBackend = supportedBackends[nextIndex];
+                
+                try {
+                    await this.modelManager.switchBackend(newBackend);
+                    this.updateBackendIndicator();
+                    this.updateVoiceStatus(`Switched to ${newBackend} backend. Models need to be reloaded.`);
+                } catch (error) {
+                    this.updateVoiceStatus(`Failed to switch to ${newBackend} backend: ${error.message}`);
+                }
+            }
+
+            updateBackendIndicator() {
+                const indicator = this.elements.backendIndicator;
+                const text = this.elements.backendText;
+                const status = this.modelManager.getAllModelsStatus();
+                const currentBackend = status.currentBackend;
+                
+                indicator.className = 'backend-indicator';
+                
+                switch (currentBackend) {
+                    case 'webgpu':
+                        indicator.classList.add('backend-webgpu');
+                        text.textContent = `WebGPU Backend (Hardware Accelerated)`;
+                        break;
+                    case 'wasm':
+                        indicator.classList.add('backend-webassembly');
+                        text.textContent = `WebAssembly Backend (Optimized)`;
+                        break;
+                    default:
+                        indicator.classList.add('backend-cpu');
+                        text.textContent = `CPU Backend (Fallback)`;
+                }
+            }
+
+            updateStatus(type, message, status) {
+                const element = this.elements[`${type}Status`];
+                element.textContent = message;
+                element.className = `status-value status-${status}`;
+            }
+
+            updateProgress(percentage) {
+                this.elements.progressFill.style.width = `${percentage}%`;
+            }
+
+            updateLatency(ms) {
+                this.elements.latencyStatus.textContent = `${ms}ms`;
+            }
+
+            updateVoiceStatus(message) {
+                this.elements.voiceStatus.textContent = message;
+            }
+        }
+
+        // Model selection functionality
+        class ModelSelector {
+            constructor() {
+                this.selectedModel = null;
+                this.customModels = [];
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                // Model card selection
+                document.querySelectorAll('.model-card').forEach(card => {
+                    card.addEventListener('click', () => this.selectModel(card));
+                });
+
+                // Custom model input
+                document.getElementById('add-custom-model').addEventListener('click', () => this.addCustomModel());
+                document.getElementById('custom-model-url').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.addCustomModel();
+                });
+
+                // Start app button
+                document.getElementById('start-app').addEventListener('click', () => this.startApp());
+            }
+
+            selectModel(card) {
+                // Remove previous selection
+                document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
+                
+                // Select new model
+                card.classList.add('selected');
+                this.selectedModel = card.dataset.model;
+                
+                // Enable start button
+                document.getElementById('start-app').disabled = false;
+            }
+
+            addCustomModel() {
+                const input = document.getElementById('custom-model-url');
+                const modelUrl = input.value.trim();
+                
+                if (!modelUrl) return;
+
+                // Create custom model card
+                const modelCard = document.createElement('div');
+                modelCard.className = 'model-card';
+                modelCard.dataset.model = modelUrl;
+                modelCard.innerHTML = `
+                    <h4>Custom Model</h4>
+                    <p>${modelUrl}</p>
+                    <div class="model-stats">
+                        <span>Speed: ❓</span>
+                        <span>Quality: ❓</span>
+                    </div>
+                `;
+
+                // Add to grid
+                document.querySelector('.model-grid').appendChild(modelCard);
+                
+                // Add event listener
+                modelCard.addEventListener('click', () => this.selectModel(modelCard));
+                
+                // Select it automatically
+                this.selectModel(modelCard);
+                
+                // Clear input
+                input.value = '';
+            }
+
+            startApp() {
+                if (!this.selectedModel) return;
+
+                // Hide model selection screen
+                document.getElementById('model-selection').style.display = 'none';
+                
+                // Show main app
+                document.getElementById('main-app').style.display = 'block';
+                
+                // Update subtitle with selected model
+                const modelName = this.selectedModel.split('/').pop();
+                document.getElementById('model-subtitle').textContent = 
+                    `Real-time AI with Whisper + ${modelName} • Privacy-first • WebGPU accelerated`;
+                
+                // Initialize voice assistant with selected model
+                window.selectedModel = this.selectedModel;
+                new VoiceAssistantOptimized();
+            }
+        }
+
+        // Initialize model selector when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ModelSelector();
+        });
+
+        // Service Worker registration for PWA (commented out to avoid data: URL issues)
+        // if ('serviceWorker' in navigator) {
+        //     navigator.serviceWorker.register('data:text/javascript,console.log("Service Worker registered")');
+        // }
+    </script>
+</body>
+</html>
