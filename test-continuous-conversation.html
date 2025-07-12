@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Continuous Conversation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-fail {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .test-pending {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-line;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Continuous Conversation Test Suite</h1>
+    
+    <div class="test-container">
+        <h2>Test 1: State Transition After TTS Completion</h2>
+        <div id="test1-result" class="test-result test-pending">Pending...</div>
+        <button onclick="runTest1()">Run Test 1</button>
+        <p><strong>Description:</strong> Tests if the system properly transitions from TTS completion back to listening state when VAD is enabled.</p>
+    </div>
+
+    <div class="test-container">
+        <h2>Test 2: VAD Activation After Processing</h2>
+        <div id="test2-result" class="test-result test-pending">Pending...</div>
+        <button onclick="runTest2()">Run Test 2</button>
+        <p><strong>Description:</strong> Tests if VAD can detect new speech input after a conversation turn completes.</p>
+    </div>
+
+    <div class="test-container">
+        <h2>Test 3: Continuous Conversation Flow</h2>
+        <div id="test3-result" class="test-result test-pending">Pending...</div>
+        <button onclick="runTest3()">Run Test 3</button>
+        <p><strong>Description:</strong> Tests a complete continuous conversation cycle: listen → process → speak → listen again.</p>
+    </div>
+
+    <div class="test-container">
+        <h2>Test 4: Manual Mode State Management</h2>
+        <div id="test4-result" class="test-result test-pending">Pending...</div>
+        <button onclick="runTest4()">Run Test 4</button>
+        <p><strong>Description:</strong> Tests that manual mode (non-VAD) properly returns to ready state after conversation.</p>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Log</h2>
+        <div id="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script>
+        // Mock classes for testing
+        class MockAudioProcessor {
+            constructor() {
+                this.audioBuffer = new Float32Array(16000);
+                this.isRecording = false;
+            }
+            
+            async initialize() { return true; }
+            startRecording() { this.isRecording = true; }
+            stopRecording() { this.isRecording = false; }
+            getAudioData() {
+                return {
+                    audioBuffer: this.audioBuffer,
+                    sampleRate: 16000,
+                    channels: 1,
+                    duration: 1.0
+                };
+            }
+            prepareWhisperInput() { return new Float32Array(16000 * 30); }
+        }
+
+        class MockModelManager {
+            constructor() {
+                this.isInitialized = true;
+            }
+            
+            async initialize() { return true; }
+            async loadModel() { return true; }
+            async runWhisperInference() { return "Test speech input"; }
+            async runTextGeneration(input, maxTokens, streamCallback) {
+                // Simulate streaming response
+                if (streamCallback) {
+                    await streamCallback({ type: 'sentence', text: 'This is a test response.', isComplete: false });
+                    await streamCallback({ type: 'complete', text: 'This is a test response.', isComplete: true });
+                }
+                return "This is a test response.";
+            }
+            getAllModelsStatus() {
+                return { currentBackend: 'test', supportedBackends: ['test'] };
+            }
+        }
+
+        // Create simplified version of VoiceAssistant for testing
+        class TestVoiceAssistant {
+            constructor() {
+                this.isListening = false;
+                this.isProcessing = false;
+                this.isGenerating = false;
+                this.shouldStopGeneration = false;
+                this.vadEnabled = false;
+                this.currentUtterance = null;
+                this.conversation = [];
+                
+                this.audioProcessor = new MockAudioProcessor();
+                this.modelManager = new MockModelManager();
+                
+                // Mock DOM elements
+                this.elements = {
+                    voiceStatus: { textContent: '' },
+                    voiceButton: { 
+                        classList: { 
+                            add: () => {}, 
+                            remove: () => {} 
+                        },
+                        textContent: '🎤'
+                    },
+                    conversation: { 
+                        appendChild: () => {},
+                        scrollTop: 0,
+                        scrollHeight: 0
+                    }
+                };
+            }
+
+            updateVoiceStatus(message) {
+                this.elements.voiceStatus.textContent = message;
+                log(`Status: ${message}`);
+            }
+
+            async speakText(text) {
+                log(`Speaking: ${text}`);
+                // Simulate TTS with a short delay
+                return new Promise((resolve) => {
+                    this.currentUtterance = { text };
+                    setTimeout(() => {
+                        this.currentUtterance = null;
+                        log(`Finished speaking: ${text}`);
+                        resolve();
+                    }, 100); // Short delay for testing
+                });
+            }
+
+            async waitForTTSCompletion() {
+                while (this.currentUtterance !== null) {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
+                log('TTS completion wait finished');
+            }
+
+            prepareForNextTurn() {
+                this.isGenerating = false;
+                this.shouldStopGeneration = false;
+                this.currentUtterance = null;
+                
+                if (this.vadEnabled) {
+                    this.updateVoiceStatus('Listening for your next question... (Auto-detect enabled)');
+                } else {
+                    this.updateVoiceStatus('Ready! Click the microphone or press Space to talk');
+                }
+                log('Prepared for next turn');
+            }
+
+            async runLLMInference(input) {
+                try {
+                    this.isGenerating = true;
+                    this.shouldStopGeneration = false;
+                    
+                    const response = await this.modelManager.runTextGeneration(input, 75, async (streamData) => {
+                        if (this.shouldStopGeneration) {
+                            throw new Error('Generation interrupted by user');
+                        }
+                        
+                        if (streamData.type === 'sentence') {
+                            if (!this.shouldStopGeneration) {
+                                await this.speakText(streamData.text);
+                            }
+                        }
+                    });
+                    
+                    this.isGenerating = false;
+                    return response;
+                    
+                } catch (error) {
+                    this.isGenerating = false;
+                    throw error;
+                }
+            }
+
+            async processAudio() {
+                if (this.isProcessing) return;
+                this.isProcessing = true;
+                log('Starting audio processing');
+
+                try {
+                    const audioData = this.audioProcessor.getAudioData();
+                    const transcript = await this.modelManager.runWhisperInference(audioData);
+                    
+                    log(`Transcript: ${transcript}`);
+                    this.addMessage('user', transcript);
+                    this.addMessage('assistant', '...');
+
+                    const response = await this.runLLMInference(transcript);
+                    log(`Response: ${response}`);
+
+                    await this.waitForTTSCompletion();
+                    this.prepareForNextTurn();
+
+                } catch (error) {
+                    log(`Processing error: ${error.message}`);
+                } finally {
+                    this.isProcessing = false;
+                    log('Audio processing completed');
+                }
+            }
+
+            addMessage(type, content) {
+                this.conversation.push({ type, content, timestamp: new Date().toLocaleTimeString() });
+                log(`Added ${type} message: ${content}`);
+            }
+
+            async simulateConversationTurn() {
+                log('Simulating conversation turn');
+                this.isListening = true;
+                this.audioProcessor.startRecording();
+                
+                // Simulate recording for a short time
+                await new Promise(resolve => setTimeout(resolve, 50));
+                
+                this.isListening = false;
+                this.audioProcessor.stopRecording();
+                
+                await this.processAudio();
+            }
+
+            // Test helper methods
+            canStartListening() {
+                return !this.isListening && !this.isProcessing && !this.isGenerating;
+            }
+
+            isReadyForContinuousConversation() {
+                return this.vadEnabled && this.canStartListening() && 
+                       this.elements.voiceStatus.textContent.includes('Listening for your next question');
+            }
+        }
+
+        let assistant;
+        
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        function setTestResult(testId, passed, message) {
+            const element = document.getElementById(`${testId}-result`);
+            element.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+            element.textContent = `${passed ? 'PASS' : 'FAIL'}: ${message}`;
+        }
+
+        async function runTest1() {
+            log('=== Running Test 1: State Transition After TTS Completion ===');
+            assistant = new TestVoiceAssistant();
+            
+            try {
+                // Enable VAD mode
+                assistant.vadEnabled = true;
+                
+                // Simulate starting TTS
+                assistant.isGenerating = true;
+                assistant.currentUtterance = { text: 'Test response' };
+                
+                // Simulate TTS completion
+                assistant.currentUtterance = null;
+                await assistant.waitForTTSCompletion();
+                assistant.prepareForNextTurn();
+                
+                // Check if system is ready for next turn
+                const isReady = assistant.isReadyForContinuousConversation();
+                const statusCorrect = assistant.elements.voiceStatus.textContent.includes('Listening for your next question');
+                const statesCorrect = !assistant.isGenerating && assistant.canStartListening();
+                
+                if (isReady && statusCorrect && statesCorrect) {
+                    setTestResult('test1', true, 'System properly transitions to listening state after TTS completion');
+                } else {
+                    setTestResult('test1', false, `State transition failed. Ready: ${isReady}, Status: ${statusCorrect}, States: ${statesCorrect}`);
+                }
+                
+            } catch (error) {
+                setTestResult('test1', false, `Test error: ${error.message}`);
+            }
+        }
+
+        async function runTest2() {
+            log('=== Running Test 2: VAD Activation After Processing ===');
+            assistant = new TestVoiceAssistant();
+            
+            try {
+                // Enable VAD
+                assistant.vadEnabled = true;
+                
+                // Simulate a complete conversation turn
+                await assistant.simulateConversationTurn();
+                
+                // Check if system can detect new speech (simulate VAD conditions)
+                const canStartListening = assistant.canStartListening();
+                const vadEnabled = assistant.vadEnabled;
+                const statusReady = assistant.elements.voiceStatus.textContent.includes('Listening for your next question');
+                
+                if (canStartListening && vadEnabled && statusReady) {
+                    setTestResult('test2', true, 'VAD can activate for new speech detection after processing');
+                } else {
+                    setTestResult('test2', false, `VAD activation failed. CanStart: ${canStartListening}, VAD: ${vadEnabled}, Status: ${statusReady}`);
+                }
+                
+            } catch (error) {
+                setTestResult('test2', false, `Test error: ${error.message}`);
+            }
+        }
+
+        async function runTest3() {
+            log('=== Running Test 3: Continuous Conversation Flow ===');
+            assistant = new TestVoiceAssistant();
+            
+            try {
+                assistant.vadEnabled = true;
+                
+                // Simulate first conversation turn
+                log('First conversation turn:');
+                await assistant.simulateConversationTurn();
+                
+                const firstTurnComplete = assistant.isReadyForContinuousConversation();
+                
+                // Simulate second conversation turn
+                log('Second conversation turn:');
+                await assistant.simulateConversationTurn();
+                
+                const secondTurnComplete = assistant.isReadyForContinuousConversation();
+                const conversationCount = assistant.conversation.filter(m => m.type === 'user').length;
+                
+                if (firstTurnComplete && secondTurnComplete && conversationCount === 2) {
+                    setTestResult('test3', true, 'Continuous conversation flow works correctly through multiple turns');
+                } else {
+                    setTestResult('test3', false, `Flow failed. Turn1: ${firstTurnComplete}, Turn2: ${secondTurnComplete}, Messages: ${conversationCount}`);
+                }
+                
+            } catch (error) {
+                setTestResult('test3', false, `Test error: ${error.message}`);
+            }
+        }
+
+        async function runTest4() {
+            log('=== Running Test 4: Manual Mode State Management ===');
+            assistant = new TestVoiceAssistant();
+            
+            try {
+                // Ensure VAD is disabled (manual mode)
+                assistant.vadEnabled = false;
+                
+                // Simulate conversation turn in manual mode
+                await assistant.simulateConversationTurn();
+                
+                const statusCorrect = assistant.elements.voiceStatus.textContent.includes('Ready! Click the microphone');
+                const statesCorrect = assistant.canStartListening() && !assistant.isGenerating;
+                const vadDisabled = !assistant.vadEnabled;
+                
+                if (statusCorrect && statesCorrect && vadDisabled) {
+                    setTestResult('test4', true, 'Manual mode properly returns to ready state');
+                } else {
+                    setTestResult('test4', false, `Manual mode failed. Status: ${statusCorrect}, States: ${statesCorrect}, VAD: ${vadDisabled}`);
+                }
+                
+            } catch (error) {
+                setTestResult('test4', false, `Test error: ${error.message}`);
+            }
+        }
+
+        // Initialize
+        log('Continuous conversation test suite loaded. Click the test buttons to run individual tests.');
+    </script>
+</body>
+</html>

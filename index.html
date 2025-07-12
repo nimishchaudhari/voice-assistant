@@ -778,7 +778,7 @@
                     if (rms > this.silenceThreshold) {
                         this.lastSpeechTime = Date.now();
                         
-                        if (this.vadEnabled && !this.isListening && !this.isProcessing) {
+                        if (this.vadEnabled && !this.isListening && !this.isProcessing && !this.isGenerating) {
                             console.log('VAD triggered - starting listening');
                             this.startListening();
                         }
@@ -916,7 +916,12 @@
 
                     const totalTime = Date.now() - startTime;
                     this.updateLatency(totalTime);
-                    this.updateVoiceStatus('Ready! Click the microphone or press Space to talk');
+                    
+                    // Wait for all TTS to complete before preparing for next turn
+                    await this.waitForTTSCompletion();
+                    
+                    // Prepare for continuous conversation
+                    this.prepareForNextTurn();
 
                 } catch (error) {
                     console.error('Processing error:', error);
@@ -968,9 +973,9 @@
                         }
                         
                         if (streamData.type === 'sentence') {
-                            // Speak the sentence immediately if not interrupted
+                            // Speak the sentence immediately if not interrupted and wait for completion
                             if (!this.shouldStopGeneration) {
-                                this.speakText(streamData.text);
+                                await this.speakText(streamData.text);
                             }
                         } else if (streamData.type === 'word') {
                             // Update the displayed text
@@ -1017,7 +1022,10 @@
                         utterance.rate = 0.9;
                         utterance.pitch = 1.0;
                         utterance.volume = 0.8;
-                        utterance.onend = resolve;
+                        utterance.onend = () => {
+                            this.currentUtterance = null;
+                            resolve();
+                        };
                         utterance.onstart = () => {
                             this.currentUtterance = utterance;
                         };
@@ -1030,6 +1038,29 @@
                         
                         speechSynthesis.speak(utterance);
                     });
+                }
+            }
+
+            async waitForTTSCompletion() {
+                // Wait for any ongoing TTS to complete
+                while (this.currentUtterance !== null || speechSynthesis.speaking) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            }
+
+            prepareForNextTurn() {
+                // Reset states and prepare for continuous conversation
+                this.isGenerating = false;
+                this.shouldStopGeneration = false;
+                this.currentUtterance = null;
+                
+                if (this.vadEnabled) {
+                    // Automatically return to listening mode for continuous conversation
+                    this.updateVoiceStatus('Listening for your next question... (Auto-detect enabled)');
+                    // No need to call startListening() here - VAD will handle it automatically
+                } else {
+                    // Manual mode - user needs to initiate next turn
+                    this.updateVoiceStatus('Ready! Click the microphone or press Space to talk');
                 }
             }
 
@@ -1069,7 +1100,7 @@
                 }
                 
                 this.updateVoiceStatus(this.vadEnabled ? 
-                    'Auto-detection enabled. Start speaking!' : 
+                    'Auto-detection enabled. Start speaking for continuous conversation!' : 
                     'Manual mode. Click microphone to talk.'
                 );
             }
