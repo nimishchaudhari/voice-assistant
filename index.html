@@ -501,10 +501,19 @@
                     <h3>🚀 MediaPipe-Powered Models (Google's Optimized Inference)</h3>
                     <p class="mediapipe-description">These models use Google's MediaPipe for enhanced performance and efficiency.</p>
                     
+                    <div class="mediapipe-notice" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 0.85rem; color: #cbd5e1;">
+                        <strong>📋 MediaPipe Requirements:</strong><br>
+                        • Requires MediaPipe Tasks LLM library (will auto-fallback to ONNX if not available)<br>
+                        • Works best with hardware acceleration (GPU/WebGPU)<br>
+                        • For Brave browser: Allow scripts and disable strict shields if experiencing issues<br>
+                        • Large models (>1GB) may require significant download time and memory
+                    </div>
+                    
                     <div class="model-grid">
                         <div class="model-card mediapipe-model" data-model="gemma-2b-it" data-backend="mediapipe">
                             <h4>Gemma 2B Instruct 🔥</h4>
-                            <p>Google's optimized Gemma via MediaPipe (~1.6GB)</p>
+                            <p>Google's optimized Gemma via MediaPipe (~1.6GB)<br>
+                            <small style="color: #94a3b8;">Auto-fallback: SmolLM2 135M if MediaPipe unavailable</small></p>
                             <div class="model-stats">
                                 <span>Speed: ⚡⚡⚡⚡⚡</span>
                                 <span>Quality: ⭐⭐⭐⭐</span>
@@ -514,7 +523,8 @@
                         
                         <div class="model-card mediapipe-model" data-model="gemma-7b-it" data-backend="mediapipe">
                             <h4>Gemma 7B Instruct 🔥</h4>
-                            <p>Larger Gemma model via MediaPipe (~5.2GB)</p>
+                            <p>Larger Gemma model via MediaPipe (~5.2GB)<br>
+                            <small style="color: #94a3b8;">Auto-fallback: TinyLlama 1.1B if MediaPipe unavailable</small></p>
                             <div class="model-stats">
                                 <span>Speed: ⚡⚡⚡⚡</span>
                                 <span>Quality: ⭐⭐⭐⭐⭐</span>
@@ -705,16 +715,30 @@
 
             async initializeApp() {
                 try {
+                    // Check browser compatibility
+                    this.checkBrowserCompatibility();
+                    
                     this.updateProgress(10);
                     
-                    // Initialize model manager
-                    await this.modelManager.initialize();
+                    // Initialize model manager with timeout
+                    const initTimeout = new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error('Model manager initialization timeout')), 15000);
+                    });
+                    
+                    const initPromise = this.modelManager.initialize();
+                    await Promise.race([initPromise, initTimeout]);
+                    
                     this.updateBackendIndicator();
                     
                     this.updateProgress(30);
                     
-                    // Load models
-                    await this.loadModels();
+                    // Load models with timeout
+                    const loadTimeout = new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error('Model loading timeout after 60 seconds')), 60000);
+                    });
+                    
+                    const loadPromise = this.loadModels();
+                    await Promise.race([loadPromise, loadTimeout]);
                     
                     this.updateProgress(100);
                     this.updateVoiceStatus('Click the microphone to start (microphone permission required)');
@@ -722,9 +746,87 @@
                     
                 } catch (error) {
                     console.error('Initialization failed:', error);
-                    this.updateVoiceStatus('Initialization failed. Check console for details.');
-                    this.updateStatus('stt', 'Error', 'error');
+                    this.handleInitializationError(error);
                 }
+            }
+
+            checkBrowserCompatibility() {
+                const userAgent = navigator.userAgent.toLowerCase();
+                const isBrave = userAgent.includes('brave') || 
+                               (navigator.brave && navigator.brave.isBrave);
+                
+                if (isBrave) {
+                    console.warn('Brave browser detected. Some features may require adjusting privacy settings.');
+                    
+                    // Add a notice for Brave users
+                    const notice = document.createElement('div');
+                    notice.style.cssText = `
+                        position: fixed; top: 10px; right: 10px; 
+                        background: rgba(255, 152, 0, 0.9); color: white; 
+                        padding: 10px; border-radius: 5px; font-size: 0.8rem;
+                        max-width: 300px; z-index: 1000;
+                    `;
+                    notice.innerHTML = `
+                        <strong>Brave Browser Detected</strong><br>
+                        If the app freezes, try disabling Shields or allowing scripts for this site.
+                        <button onclick="this.parentElement.remove()" style="float: right; background: none; border: none; color: white; cursor: pointer;">✕</button>
+                    `;
+                    document.body.appendChild(notice);
+                    
+                    // Auto-hide after 10 seconds
+                    setTimeout(() => {
+                        if (notice.parentElement) notice.remove();
+                    }, 10000);
+                }
+            }
+
+            handleInitializationError(error) {
+                let errorMessage = 'Initialization failed. ';
+                let suggestion = '';
+                
+                if (error.message.includes('timeout')) {
+                    errorMessage += 'The app timed out while loading models.';
+                    suggestion = 'This often happens with slow connections or strict browser settings. Try refreshing the page or using a different model.';
+                } else if (error.message.includes('MediaPipe')) {
+                    errorMessage += 'MediaPipe initialization failed.';
+                    suggestion = 'Falling back to standard ONNX models. MediaPipe features will not be available.';
+                } else if (error.message.includes('WebGPU')) {
+                    errorMessage += 'Hardware acceleration failed.';
+                    suggestion = 'The app will use CPU processing, which may be slower.';
+                } else {
+                    errorMessage += error.message;
+                    suggestion = 'Check the browser console for more details.';
+                }
+                
+                this.updateVoiceStatus(`❌ ${errorMessage} ${suggestion}`);
+                this.updateStatus('stt', 'Error', 'error');
+                this.updateStatus('llm', 'Error', 'error');
+                this.updateStatus('tts', 'Error', 'error');
+                
+                console.error('Full error details:', error);
+                
+                // Show error details in UI
+                const errorDetails = document.createElement('div');
+                errorDetails.style.cssText = `
+                    background: rgba(239, 68, 68, 0.1); 
+                    border: 1px solid rgba(239, 68, 68, 0.3); 
+                    border-radius: 8px; padding: 15px; margin-top: 15px;
+                    color: #fca5a5; font-size: 0.85rem;
+                `;
+                errorDetails.innerHTML = `
+                    <strong>Error Details:</strong><br>
+                    ${error.message}<br><br>
+                    <strong>Suggestions:</strong><br>
+                    ${suggestion}<br><br>
+                    <button onclick="location.reload()" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                        🔄 Reload Page
+                    </button>
+                    <button onclick="this.parentElement.remove()" style="background: transparent; color: #fca5a5; border: 1px solid #fca5a5; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 10px;">
+                        Dismiss
+                    </button>
+                `;
+                
+                this.elements.conversation.appendChild(errorDetails);
             }
 
             async loadModels() {

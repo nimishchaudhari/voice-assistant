@@ -103,14 +103,34 @@ class ModelManager {
         try {
             // Check if MediaPipe LLM is available
             if (typeof window.MediaPipeLLM !== 'undefined') {
+                console.log('MediaPipeLLM class found, attempting to initialize...');
+                
                 this.mediaPipeLLM = new window.MediaPipeLLM();
-                console.log('MediaPipe LLM integration available');
+                
+                // Test MediaPipe initialization with timeout
+                const initTimeout = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('MediaPipe initialization timeout')), 3000);
+                });
+                
+                const initPromise = this.mediaPipeLLM.initialize();
+                
+                try {
+                    await Promise.race([initPromise, initTimeout]);
+                    console.log('MediaPipe LLM integration initialized successfully');
+                } catch (error) {
+                    console.warn('MediaPipe initialization failed during test:', error);
+                    this.mediaPipeLLM = null;
+                    this.useMediaPipe = false;
+                }
             } else {
                 console.log('MediaPipe LLM not available - falling back to ONNX models');
+                this.mediaPipeLLM = null;
+                this.useMediaPipe = false;
             }
         } catch (error) {
             console.warn('MediaPipe initialization failed:', error);
             this.mediaPipeLLM = null;
+            this.useMediaPipe = false;
         }
     }
 
@@ -229,14 +249,30 @@ class ModelManager {
 
             // Initialize MediaPipe if not already done
             if (!this.mediaPipeLLM.isInitialized) {
-                await this.mediaPipeLLM.initialize();
+                // Add timeout for MediaPipe initialization
+                const initTimeout = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('MediaPipe initialization timeout after 10 seconds')), 10000);
+                });
+                
+                try {
+                    await Promise.race([this.mediaPipeLLM.initialize(), initTimeout]);
+                } catch (error) {
+                    console.error('MediaPipe initialization failed:', error);
+                    throw new Error(`MediaPipe initialization failed: ${error.message}`);
+                }
             }
 
             // Map model names to MediaPipe model IDs
             const mediaPipeModelId = this.mapToMediaPipeModel(modelName);
             
-            // Load the MediaPipe model
-            await this.mediaPipeLLM.loadModel(mediaPipeModelId, progressCallback);
+            // Load the MediaPipe model with timeout
+            const loadTimeout = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('MediaPipe model loading timeout after 30 seconds')), 30000);
+            });
+            
+            const loadPromise = this.mediaPipeLLM.loadModel(mediaPipeModelId, progressCallback);
+            
+            await Promise.race([loadPromise, loadTimeout]);
 
             // Store the MediaPipe model reference
             this.models.set('textgen', {
@@ -255,12 +291,67 @@ class ModelManager {
 
         } catch (error) {
             console.error('MediaPipe model loading failed:', error);
-            if (progressCallback) progressCallback(-1, 'MediaPipe loading failed, falling back to ONNX');
             
-            // Fallback to ONNX model
-            this.useMediaPipe = false;
-            return this.loadModel('textgen', progressCallback);
+            // Determine if fallback should be attempted
+            const shouldFallback = error.message.includes('not available') || 
+                                   error.message.includes('timeout') ||
+                                   error.message.includes('initialization failed');
+            
+            if (shouldFallback) {
+                console.warn('Attempting fallback to ONNX model...');
+                if (progressCallback) progressCallback(10, 'MediaPipe failed, falling back to ONNX...');
+                
+                // Reset MediaPipe usage flag
+                this.useMediaPipe = false;
+                
+                // Try to load equivalent ONNX model instead
+                const fallbackModel = this.getFallbackONNXModel(modelName);
+                if (fallbackModel) {
+                    console.log(`Falling back to ONNX model: ${fallbackModel}`);
+                    const originalModelName = this.config.textgen.modelName;
+                    this.config.textgen.modelName = fallbackModel;
+                    
+                    try {
+                        const result = await this.loadModel('textgen', (progress, message) => {
+                            if (progressCallback) {
+                                progressCallback(progress, `Fallback: ${message}`);
+                            }
+                        });
+                        
+                        console.log('Successfully fell back to ONNX model');
+                        return result;
+                    } catch (fallbackError) {
+                        // Restore original model name and re-throw
+                        this.config.textgen.modelName = originalModelName;
+                        throw fallbackError;
+                    }
+                } else {
+                    throw new Error(`MediaPipe model loading failed and no suitable ONNX fallback found: ${error.message}`);
+                }
+            } else {
+                if (progressCallback) progressCallback(-1, `MediaPipe loading failed: ${error.message}`);
+                throw error;
+            }
         }
+    }
+
+    getFallbackONNXModel(mediaPipeModelName) {
+        // Map MediaPipe models to suitable ONNX alternatives
+        const modelLower = mediaPipeModelName.toLowerCase();
+        
+        if (modelLower.includes('gemma-2b') || modelLower.includes('gemma2b')) {
+            // Fallback to a small efficient model for Gemma 2B
+            return 'HuggingFaceTB/SmolLM2-135M-Instruct';
+        } else if (modelLower.includes('gemma-7b') || modelLower.includes('gemma7b')) {
+            // Fallback to a larger model for Gemma 7B
+            return 'Xenova/TinyLlama-1.1B-Chat-v1.0';
+        } else if (modelLower.includes('gemma')) {
+            // Default fallback for any Gemma model
+            return 'HuggingFaceTB/SmolLM2-135M-Instruct';
+        }
+        
+        // No suitable fallback found
+        return null;
     }
 
     mapToMediaPipeModel(modelName) {

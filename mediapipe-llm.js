@@ -30,27 +30,59 @@ class MediaPipeLLM {
     async initialize() {
         try {
             // Check if MediaPipe LLM Inference is available
-            if (typeof LlmInference === 'undefined') {
-                throw new Error('MediaPipe LLM Inference library not found. Please include the MediaPipe script.');
-            }
-
-            console.log('Initializing MediaPipe LLM inference...');
+            console.log('Checking for MediaPipe LLM Inference library...');
             
-            // Create LLM inference instance
-            this.llmInference = await LlmInference.createFromOptions({
-                baseOptions: {
-                    modelAssetPath: '', // Will be set when loading specific model
-                    delegate: 'GPU' // Use GPU acceleration when available
-                }
+            // Add timeout for initialization to prevent hanging
+            const initPromise = this.initializeMediaPipe();
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('MediaPipe initialization timeout')), 5000);
             });
-
+            
+            await Promise.race([initPromise, timeoutPromise]);
+            
             this.isInitialized = true;
             console.log('MediaPipe LLM inference initialized successfully');
             
             return true;
         } catch (error) {
             console.error('MediaPipe LLM initialization failed:', error);
+            console.warn('Falling back to ONNX models. MediaPipe features will not be available.');
             throw error;
+        }
+    }
+
+    async initializeMediaPipe() {
+        // Check for MediaPipe LLM library availability
+        if (typeof window !== 'undefined' && typeof window.LlmInference !== 'undefined') {
+            console.log('Found MediaPipe LLM Inference library');
+            
+            // Create LLM inference instance
+            this.llmInference = await window.LlmInference.createFromOptions({
+                baseOptions: {
+                    modelAssetPath: '', // Will be set when loading specific model
+                    delegate: 'GPU' // Use GPU acceleration when available
+                }
+            });
+            
+            return true;
+        } else {
+            // Check if MediaPipe Tasks GenAI is available (alternative approach)
+            if (typeof window !== 'undefined' && 
+                window.MediaPipeTasksGenAI && 
+                window.MediaPipeTasksGenAI.LlmInference) {
+                
+                console.log('Found MediaPipe Tasks GenAI library');
+                this.llmInference = await window.MediaPipeTasksGenAI.LlmInference.createFromOptions({
+                    baseOptions: {
+                        modelAssetPath: '',
+                        delegate: 'GPU'
+                    }
+                });
+                
+                return true;
+            } else {
+                throw new Error('MediaPipe LLM Inference library not found. The real MediaPipe library needs to be included via CDN.');
+            }
         }
     }
 
