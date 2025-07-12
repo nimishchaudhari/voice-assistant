@@ -502,11 +502,12 @@
                     <p class="mediapipe-description">These models use Google's MediaPipe for enhanced performance and efficiency.</p>
                     
                     <div class="mediapipe-notice" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 0.85rem; color: #cbd5e1;">
-                        <strong>📋 MediaPipe Requirements:</strong><br>
-                        • Requires MediaPipe Tasks LLM library (will auto-fallback to ONNX if not available)<br>
-                        • Works best with hardware acceleration (GPU/WebGPU)<br>
-                        • For Brave browser: Allow scripts and disable strict shields if experiencing issues<br>
-                        • Large models (>1GB) may require significant download time and memory
+                        <strong>📋 MediaPipe Information:</strong><br>
+                        • MediaPipe models require the MediaPipe Tasks LLM library (experimental feature)<br>
+                        • <strong>Auto-fallback:</strong> If MediaPipe is unavailable, these models automatically switch to proven ONNX alternatives<br>
+                        • Gemma 3 1B → SmolLM2 1.7B or TinyLlama (seamless transition)<br>
+                        • For Brave browser: Allow scripts and disable strict shields if needed<br>
+                        • Large models (>1GB) require significant download time and memory
                     </div>
                     
                     <div class="model-grid">
