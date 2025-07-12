@@ -81,6 +81,8 @@ class MediaPipeLLM {
                 
                 return true;
             } else {
+                // Fail immediately if MediaPipe is not available - don't simulate
+                console.log('MediaPipe LLM library not detected - no simulation, immediate fallback');
                 throw new Error('MediaPipe LLM Inference library not found. The real MediaPipe library needs to be included via CDN.');
             }
         }
