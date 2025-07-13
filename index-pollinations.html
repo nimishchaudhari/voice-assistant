@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Assistant POC - Optimized</title>
-    <meta name="description" content="Real-time AI voice assistant with optimized models running entirely in your browser">
+    <title>Voice Assistant POC - Pollinations AI</title>
+    <meta name="description" content="Real-time AI voice assistant powered by Pollinations AI cloud services">
     
     <!-- PWA Meta Tags -->
-    <!-- <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;Voice Assistant POC&quot;,&quot;short_name&quot;:&quot;VoiceAI&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;theme_color&quot;:&quot;#2563eb&quot;,&quot;background_color&quot;:&quot;#0f172a&quot;}"> -->
     <meta name="theme-color" content="#2563eb">
     
     <style>
@@ -51,6 +50,17 @@
         .subtitle {
             color: #94a3b8;
             font-size: 1.1rem;
+        }
+
+        .pollinations-badge {
+            display: inline-block;
+            background: linear-gradient(45deg, #10b981, #3b82f6);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 8px;
         }
 
         .main-panel {
@@ -243,258 +253,57 @@
             height: 8px;
             border-radius: 50%;
             margin-right: 5px;
+            background-color: #10b981;
         }
 
-        .backend-webgpu { background-color: #10b981; }
-        .backend-webassembly { background-color: #f59e0b; }
-        .backend-cpu { background-color: #ef4444; }
-
-        /* Model Selection Styles */
-        .model-selection-screen {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .model-options {
-            background: rgba(30, 41, 59, 0.5);
-            border-radius: 20px;
-            padding: 30px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(51, 65, 85, 0.5);
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .model-options h3 {
-            color: #e2e8f0;
-            margin-bottom: 20px;
-            font-size: 1.25rem;
-        }
-
-        .model-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .model-card {
-            background: rgba(51, 65, 85, 0.4);
-            border: 2px solid rgba(71, 85, 105, 0.3);
-            border-radius: 12px;
-            padding: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .model-card:hover {
-            border-color: rgba(59, 130, 246, 0.5);
-            background: rgba(51, 65, 85, 0.6);
-        }
-
-        .model-card.selected {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.2);
-        }
-
-        .model-card h4 {
-            color: #e2e8f0;
-            margin-bottom: 8px;
-            font-size: 1.1rem;
-        }
-
-        .model-card p {
-            color: #94a3b8;
-            margin-bottom: 10px;
-            font-size: 0.9rem;
-        }
-
-        .model-stats {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            color: #cbd5e1;
-        }
-
-        .custom-model-section {
-            border-top: 1px solid rgba(71, 85, 105, 0.3);
-            padding-top: 25px;
-            margin-top: 25px;
-        }
-
-        .custom-input {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .custom-input input {
-            flex: 1;
+        .cloud-info {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
             padding: 12px;
-            border: 1px solid rgba(71, 85, 105, 0.5);
-            border-radius: 8px;
-            background: rgba(30, 41, 59, 0.5);
-            color: white;
+            margin-bottom: 20px;
             font-size: 0.9rem;
         }
 
-        .custom-input input::placeholder {
-            color: #64748b;
-        }
-
-        .custom-input button {
-            padding: 12px 20px;
-            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-        }
-
-        .custom-input button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
-
-        .help-text {
-            color: #64748b;
-            font-size: 0.8rem;
-            margin-top: 5px;
-        }
-
-        .start-button {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(45deg, #10b981, #3b82f6);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 20px;
-        }
-
-        .start-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .start-button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        .cloud-info h4 {
+            color: #10b981;
+            margin-bottom: 5px;
+            font-size: 1rem;
         }
 
         @media (max-width: 640px) {
             .title { font-size: 2rem; }
             .main-panel { padding: 20px; }
             .voice-button { width: 100px; height: 100px; font-size: 1.5rem; }
-            .model-grid { grid-template-columns: 1fr; }
-            .custom-input { flex-direction: column; }
         }
     </style>
 </head>
 <body>
-    <!-- Model Selection Screen -->
-    <div class="model-selection-screen" id="model-selection">
-        <div class="container">
-            <div class="header">
-                <h1 class="title">Choose Your AI Model</h1>
-                <p class="subtitle">Select a language model to power your voice assistant</p>
-            </div>
-            
-            <div class="model-options">
-                <h3>Recommended Models</h3>
-                <div class="model-grid">
-                    <div class="model-card" data-model="Xenova/TinyLlama-1.1B-Chat-v1.0">
-                        <h4>TinyLlama 1.1B</h4>
-                        <p>Fast, lightweight model (~650MB)</p>
-                        <div class="model-stats">
-                            <span>Speed: ⚡⚡⚡</span>
-                            <span>Quality: ⭐⭐</span>
-                        </div>
-                    </div>
-                    
-                    <div class="model-card" data-model="Xenova/distilgpt2">
-                        <h4>DistilGPT2</h4>
-                        <p>Very fast, small model (~350MB)</p>
-                        <div class="model-stats">
-                            <span>Speed: ⚡⚡⚡⚡</span>
-                            <span>Quality: ⭐⭐</span>
-                        </div>
-                    </div>
-                    
-                    <div class="model-card" data-model="Xenova/gpt2">
-                        <h4>GPT-2</h4>
-                        <p>Classic model, good quality (~550MB)</p>
-                        <div class="model-stats">
-                            <span>Speed: ⚡⚡⚡</span>
-                            <span>Quality: ⭐⭐⭐</span>
-                        </div>
-                    </div>
-                    
-                    <div class="model-card" data-model="HuggingFaceTB/SmolLM2-135M-Instruct/q4f16">
-                        <h4>SmolLM2 135M (Fast)</h4>
-                        <p>4-bit quantized model (~118MB)</p>
-                        <div class="model-stats">
-                            <span>Speed: ⚡⚡⚡⚡⚡</span>
-                            <span>Quality: ⭐⭐⭐</span>
-                        </div>
-                    </div>
-                    
-                    <div class="model-card" data-model="HuggingFaceTB/SmolLM2-135M-Instruct">
-                        <h4>SmolLM2 135M (Quality)</h4>
-                        <p>16-bit model, slower (~270MB)</p>
-                        <div class="model-stats">
-                            <span>Speed: ⚡⚡⚡</span>
-                            <span>Quality: ⭐⭐⭐⭐</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="custom-model-section">
-                    <h3>Custom Hugging Face Model</h3>
-                    <div class="custom-input">
-                        <input type="text" id="custom-model-url" placeholder="e.g., HuggingFaceTB/SmolLM2-135M-Instruct, Xenova/CodeGen-350M-mono" />
-                        <button id="add-custom-model">Add Model</button>
-                    </div>
-                    <p class="help-text">Enter any ONNX text generation model from Hugging Face</p>
-                </div>
-                
-                <button id="start-app" class="start-button" disabled>Start Voice Assistant</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main App (hidden initially) -->
-    <div class="container" id="main-app" style="display: none;">
+    <div class="container">
         <div class="header">
-            <h1 class="title">Voice Assistant POC - Optimized</h1>
-            <p class="subtitle" id="model-subtitle">Real-time AI with Whisper + TinyLlama • Privacy-first • WebGPU accelerated</p>
-            <div style="margin-top: 15px; padding: 10px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; font-size: 0.9rem;">
-                <strong>🌸 New!</strong> Try the <a href="index-pollinations.html" style="color: #60a5fa; text-decoration: underline;">Pollinations AI version</a> for faster cloud-powered responses!
-            </div>
+            <h1 class="title">Voice Assistant POC</h1>
+            <p class="subtitle">Real-time AI powered by Pollinations AI</p>
+            <div class="pollinations-badge">🌸 Pollinations AI</div>
         </div>
 
         <div class="main-panel">
+            <div class="cloud-info">
+                <h4>🚀 Cloud-Powered Performance</h4>
+                <p>This voice assistant now uses Pollinations AI cloud services for faster, more powerful AI responses. Your conversations are processed using state-of-the-art models in the cloud for the best possible experience.</p>
+            </div>
+
             <div class="status-section">
                 <div class="status-grid">
                     <div class="status-card">
                         <div class="status-title">Speech Recognition</div>
                         <div class="status-value" id="stt-status">
-                            <span class="loading-indicator"></span> Loading Whisper...
+                            <span class="loading-indicator"></span> Initializing...
                         </div>
                     </div>
                     <div class="status-card">
                         <div class="status-title">AI Brain</div>
                         <div class="status-value" id="llm-status">
-                            <span class="loading-indicator"></span> Loading TinyLlama...
+                            <span class="loading-indicator"></span> Connecting to Pollinations...
                         </div>
                     </div>
                     <div class="status-card">
@@ -513,7 +322,7 @@
                 </div>
                 <div class="model-info" id="model-info">
                     <span class="backend-indicator" id="backend-indicator"></span>
-                    <span id="backend-text">Detecting optimal backend...</span>
+                    <span id="backend-text">Connecting to Pollinations AI cloud services...</span>
                 </div>
             </div>
 
@@ -522,14 +331,14 @@
                     🎤
                 </button>
                 <p style="margin-top: 15px; color: #94a3b8; text-align: center;">
-                    <span id="voice-status">Loading AI models... Please wait</span>
+                    <span id="voice-status">Initializing Pollinations AI... Please wait</span>
                 </p>
                 
                 <div class="controls">
                     <button class="control-button" id="toggle-vad">Enable Auto-detect</button>
                     <button class="control-button" id="clear-conversation">Clear Chat</button>
                     <button class="control-button" id="test-models">Test Models</button>
-                    <button class="control-button" id="backend-switch">Switch Backend</button>
+                    <button class="control-button" id="generate-image">Generate Image</button>
                 </div>
             </div>
 
@@ -537,54 +346,29 @@
         </div>
     </div>
 
-    <!-- Transformers.js for real AI models -->
-    <script type="module">
-        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.0';
-        
-        // Configure environment to reduce warnings
-        env.allowRemoteModels = true;
-        env.allowLocalModels = false;
-        env.backends.onnx.wasm.numThreads = 1; // Reduce threading warnings
-        
-        // Suppress console warnings for cleaner output
-        const originalWarn = console.warn;
-        console.warn = function(...args) {
-            const message = args.join(' ');
-            // Filter out known non-critical warnings
-            if (message.includes('Unable to determine content-length') ||
-                message.includes('powerPreference option is currently ignored') ||
-                message.includes('Some nodes were not assigned to the preferred execution providers')) {
-                return; // Skip these warnings
-            }
-            originalWarn.apply(console, args);
-        };
-        
-        window.transformers = { pipeline, env };
-    </script>
-    
     <!-- Enhanced Audio Processing -->
     <script src="audio-processor.js"></script>
     
-    <!-- Model Manager -->
-    <script src="model-manager.js"></script>
+    <!-- Pollinations Model Manager -->
+    <script src="pollinations-model-manager.js"></script>
     
     <script>
-        class VoiceAssistantOptimized {
+        class VoiceAssistantPollinations {
             constructor() {
                 this.mediaStream = null;
                 this.analyser = null;
                 this.isListening = false;
                 this.isProcessing = false;
                 this.vadEnabled = false;
-                this.silenceThreshold = 0.02; // Increased threshold for better detection
-                this.silenceTimeout = 1500; // Reduced timeout for responsiveness
+                this.silenceThreshold = 0.02;
+                this.silenceTimeout = 1500;
                 this.lastSpeechTime = 0;
                 
                 // Enhanced audio processing
                 this.audioProcessor = new AudioProcessor();
                 
-                // Model management
-                this.modelManager = new ModelManager();
+                // Pollinations model management
+                this.modelManager = new PollinationsModelManager();
                 
                 this.conversation = [];
                 this.isGenerating = false;
@@ -608,7 +392,7 @@
                     toggleVad: document.getElementById('toggle-vad'),
                     clearChat: document.getElementById('clear-conversation'),
                     testModels: document.getElementById('test-models'),
-                    backendSwitch: document.getElementById('backend-switch'),
+                    generateImage: document.getElementById('generate-image'),
                     modelInfo: document.getElementById('model-info'),
                     backendIndicator: document.getElementById('backend-indicator'),
                     backendText: document.getElementById('backend-text')
@@ -620,7 +404,7 @@
                 this.elements.toggleVad.addEventListener('click', () => this.toggleVAD());
                 this.elements.clearChat.addEventListener('click', () => this.clearConversation());
                 this.elements.testModels.addEventListener('click', () => this.testModels());
-                this.elements.backendSwitch.addEventListener('click', () => this.switchBackend());
+                this.elements.generateImage.addEventListener('click', () => this.generateImagePrompt());
 
                 document.addEventListener('keydown', (e) => {
                     if (e.code === 'Space' && !e.repeat) {
@@ -641,7 +425,7 @@
                 try {
                     this.updateProgress(10);
                     
-                    // Initialize model manager
+                    // Initialize Pollinations model manager
                     await this.modelManager.initialize();
                     this.updateBackendIndicator();
                     
@@ -651,7 +435,7 @@
                     await this.loadModels();
                     
                     this.updateProgress(100);
-                    this.updateVoiceStatus('Click the microphone to start (microphone permission required)');
+                    this.updateVoiceStatus('Ready! Click the microphone to start (powered by Pollinations AI)');
                     this.elements.voiceButton.disabled = false;
                     
                 } catch (error) {
@@ -663,49 +447,36 @@
 
             async loadModels() {
                 try {
-                    // Load real Whisper model for speech recognition
+                    // Load speech recognition
                     await this.modelManager.loadModel('whisper', (progress, message) => {
                         this.updateStatus('stt', message, progress === -1 ? 'error' : 'loading');
                         if (progress >= 0) {
-                            this.updateProgress(10 + (progress * 0.4)); // 10-50%
+                            this.updateProgress(10 + (progress * 0.3)); // 10-40%
                         }
                     });
-                    this.updateStatus('stt', 'Real Whisper Model Ready ✓', 'ready');
+                    this.updateStatus('stt', 'Speech Recognition Ready ✓', 'ready');
                     
-                    // Load TTS (Web Speech API)
-                    await this.loadTTSModel();
+                    // Load TTS
+                    await this.modelManager.loadModel('tts', (progress, message) => {
+                        this.updateStatus('tts', message, progress === -1 ? 'error' : 'loading');
+                        if (progress >= 0) {
+                            this.updateProgress(40 + (progress * 0.2)); // 40-60%
+                        }
+                    });
+                    this.updateStatus('tts', 'Text-to-Speech Ready ✓', 'ready');
                     
-                    // Load real TinyLlama for conversation
+                    // Load Pollinations text generation
                     await this.modelManager.loadModel('textgen', (progress, message) => {
                         this.updateStatus('llm', message, progress === -1 ? 'error' : 'loading');
                         if (progress >= 0) {
-                            this.updateProgress(50 + (progress * 0.4)); // 50-90%
+                            this.updateProgress(60 + (progress * 0.3)); // 60-90%
                         }
                     });
-                    const modelDisplayName = (window.selectedModel || 'Xenova/TinyLlama-1.1B-Chat-v1.0').split('/').pop();
-                    this.updateStatus('llm', `Real ${modelDisplayName} Model Ready ✓`, 'ready');
+                    this.updateStatus('llm', 'Pollinations AI Ready ✓', 'ready');
                     
                 } catch (error) {
-                    console.error('Real model loading failed:', error);
+                    console.error('Model loading failed:', error);
                     throw error;
-                }
-            }
-
-            async loadTTSModel() {
-                try {
-                    this.updateStatus('tts', 'Initializing TTS...', 'loading');
-                    
-                    // Check Web Speech API support
-                    if ('speechSynthesis' in window) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        this.updateStatus('tts', 'Web Speech API Ready ✓', 'ready');
-                    } else {
-                        throw new Error('Web Speech API not supported');
-                    }
-                    
-                } catch (error) {
-                    console.error('TTS initialization failed:', error);
-                    this.updateStatus('tts', 'Not Supported', 'error');
                 }
             }
 
@@ -763,7 +534,6 @@
 
                     this.analyser.getByteFrequencyData(dataArray);
                     
-                    // Calculate RMS with focus on speech frequencies (300-3400 Hz)
                     let sum = 0;
                     const speechStart = Math.floor(300 * bufferLength / (this.analyser.context.sampleRate / 2));
                     const speechEnd = Math.floor(3400 * bufferLength / (this.analyser.context.sampleRate / 2));
@@ -772,11 +542,6 @@
                         sum += dataArray[i] * dataArray[i];
                     }
                     const rms = Math.sqrt(sum / (speechEnd - speechStart)) / 255;
-
-                    // Debug VAD levels (remove this line after testing)
-                    if (this.vadEnabled && Date.now() % 1000 < 50) {
-                        console.log('VAD level:', rms.toFixed(4), 'threshold:', this.silenceThreshold);
-                    }
 
                     if (rms > this.silenceThreshold) {
                         this.lastSpeechTime = Date.now();
@@ -834,7 +599,6 @@
             async startListening() {
                 if (this.isListening || this.isProcessing) return;
 
-                // Stop any ongoing generation or speech
                 this.stopGeneration();
 
                 this.isListening = true;
@@ -847,17 +611,14 @@
             }
 
             stopGeneration() {
-                // Stop text generation
                 this.shouldStopGeneration = true;
                 this.isGenerating = false;
                 
-                // Stop current speech synthesis
                 if (this.currentUtterance) {
                     speechSynthesis.cancel();
                     this.currentUtterance = null;
                 }
                 
-                // Clear any pending speech
                 speechSynthesis.cancel();
             }
 
@@ -867,13 +628,12 @@
                 this.isListening = false;
                 this.elements.voiceButton.classList.remove('listening');
                 this.elements.voiceButton.textContent = '🎤';
-                this.updateVoiceStatus('Processing...');
+                this.updateVoiceStatus('Processing with Pollinations AI...');
 
                 await this.processAudio();
             }
 
             startRecording() {
-                // Start audio processor recording
                 this.audioProcessor.startRecording();
                 this.recordingStartTime = Date.now();
                 console.log('Started recording audio...');
@@ -886,10 +646,8 @@
                 const startTime = Date.now();
 
                 try {
-                    // Stop audio recording
                     this.audioProcessor.stopRecording();
                     
-                    // Get processed audio data
                     const audioData = this.audioProcessor.getAudioData();
                     
                     if (audioData.duration < 0.5) {
@@ -907,23 +665,17 @@
                     }
 
                     this.addMessage('user', transcript);
-
-                    // Add empty assistant message for streaming updates
                     this.addMessage('assistant', '...');
 
-                    // Generate AI response with real language model (streaming)
+                    // Generate AI response with Pollinations (streaming)
                     const response = await this.runLLMInference(transcript);
                     
-                    // Update the final message
                     this.updateStreamingMessage(response);
 
                     const totalTime = Date.now() - startTime;
                     this.updateLatency(totalTime);
                     
-                    // Wait for all TTS to complete before preparing for next turn
                     await this.waitForTTSCompletion();
-                    
-                    // Prepare for continuous conversation
                     this.prepareForNextTurn();
 
                 } catch (error) {
@@ -936,29 +688,12 @@
 
             async runSTTInference(audioData) {
                 try {
-                    // Prepare audio for Whisper
-                    const whisperInput = this.audioProcessor.prepareWhisperInput(audioData);
-                    
-                    // Run Whisper inference through model manager
-                    const transcript = await this.modelManager.runWhisperInference(whisperInput);
-                    
+                    const transcript = await this.modelManager.runWhisperInference(audioData.audioBuffer);
                     return transcript;
                     
                 } catch (error) {
                     console.error('STT inference failed:', error);
-                    
-                    // Fallback to demo transcript for POC
-                    const demoTranscripts = [
-                        "Hello, how are you today?",
-                        "What's the weather like?",
-                        "Tell me about artificial intelligence",
-                        "How does machine learning work?",
-                        "Explain quantum computing",
-                        "What are the benefits of renewable energy?",
-                        "How can we solve climate change?"
-                    ];
-                    
-                    return demoTranscripts[Math.floor(Math.random() * demoTranscripts.length)];
+                    throw error;
                 }
             }
 
@@ -968,20 +703,17 @@
                     this.shouldStopGeneration = false;
                     let displayedResponse = '';
                     
-                    // Run real text generation with streaming through model manager
-                    const response = await this.modelManager.runTextGeneration(input, 75, async (streamData) => {
-                        // Check if we should stop generation
+                    // Run Pollinations text generation with streaming
+                    const response = await this.modelManager.runTextGeneration(input, 150, async (streamData) => {
                         if (this.shouldStopGeneration) {
                             throw new Error('Generation interrupted by user');
                         }
                         
                         if (streamData.type === 'sentence') {
-                            // Speak the sentence immediately if not interrupted and wait for completion
                             if (!this.shouldStopGeneration) {
                                 await this.speakText(streamData.text);
                             }
                         } else if (streamData.type === 'word') {
-                            // Update the displayed text
                             displayedResponse = streamData.fullText;
                             this.updateStreamingMessage(displayedResponse);
                         }
@@ -997,15 +729,12 @@
                         return displayedResponse || "Response interrupted by user.";
                     }
                     
-                    console.error('Real LLM inference failed:', error);
-                    
-                    // Fallback response if model fails
-                    return "I'm having trouble processing that request. The AI model may be loading or encountered an error.";
+                    console.error('Pollinations text generation failed:', error);
+                    return "I'm having trouble connecting to Pollinations AI. Please try again.";
                 }
             }
 
             updateStreamingMessage(text) {
-                // Update the last assistant message with streaming text
                 const messages = this.elements.conversation.children;
                 if (messages.length > 0) {
                     const lastMessage = messages[messages.length - 1];
@@ -1033,7 +762,6 @@
                             this.currentUtterance = utterance;
                         };
                         
-                        // Check if we should stop before speaking
                         if (this.shouldStopGeneration) {
                             resolve();
                             return;
@@ -1045,25 +773,20 @@
             }
 
             async waitForTTSCompletion() {
-                // Wait for any ongoing TTS to complete
                 while (this.currentUtterance !== null || speechSynthesis.speaking) {
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
             }
 
             prepareForNextTurn() {
-                // Reset states and prepare for continuous conversation
                 this.isGenerating = false;
                 this.shouldStopGeneration = false;
                 this.currentUtterance = null;
                 
                 if (this.vadEnabled) {
-                    // Automatically return to listening mode for continuous conversation
-                    this.updateVoiceStatus('Listening for your next question... (Auto-detect enabled)');
-                    // No need to call startListening() here - VAD will handle it automatically
+                    this.updateVoiceStatus('Listening for your next question... (Pollinations AI ready)');
                 } else {
-                    // Manual mode - user needs to initiate next turn
-                    this.updateVoiceStatus('Ready! Click the microphone or press Space to talk');
+                    this.updateVoiceStatus('Ready! Click the microphone or press Space to talk (Pollinations AI)');
                 }
             }
 
@@ -1114,32 +837,25 @@
             }
 
             async testModels() {
-                this.updateVoiceStatus('Testing real AI models...');
+                this.updateVoiceStatus('Testing Pollinations AI models...');
                 
-                const modelStatus = this.modelManager.getAllModelsStatus();
-                
-                // Test Whisper
-                if (modelStatus.whisper?.loaded) {
-                    this.updateStatus('stt', 'Testing real Whisper...', 'loading');
-                    try {
-                        // Test with dummy audio
-                        const dummyAudio = new Float32Array(16000 * 2); // 2 seconds of silence
-                        const result = await this.modelManager.runWhisperInference(dummyAudio);
-                        this.updateStatus('stt', `Real Whisper Test Passed ✓`, 'ready');
-                    } catch (error) {
-                        this.updateStatus('stt', 'Whisper Test Failed', 'error');
-                    }
+                // Test speech recognition
+                this.updateStatus('stt', 'Testing speech recognition...', 'loading');
+                try {
+                    const dummyAudio = new Float32Array(16000 * 2);
+                    await this.modelManager.runWhisperInference(dummyAudio);
+                    this.updateStatus('stt', 'STT Test Passed ✓', 'ready');
+                } catch (error) {
+                    this.updateStatus('stt', 'STT Test Failed', 'error');
                 }
                 
-                // Test text generation
-                if (modelStatus.textgen?.loaded) {
-                    this.updateStatus('llm', 'Testing real language model...', 'loading');
-                    try {
-                        const result = await this.modelManager.runTextGeneration("Hello, how are you?");
-                        this.updateStatus('llm', `Real TinyLlama Test Passed ✓`, 'ready');
-                    } catch (error) {
-                        this.updateStatus('llm', 'Language Model Test Failed', 'error');
-                    }
+                // Test Pollinations text generation
+                this.updateStatus('llm', 'Testing Pollinations AI...', 'loading');
+                try {
+                    await this.modelManager.runTextGeneration("Hello, this is a test");
+                    this.updateStatus('llm', 'Pollinations AI Test Passed ✓', 'ready');
+                } catch (error) {
+                    this.updateStatus('llm', 'Pollinations Test Failed', 'error');
                 }
                 
                 // Test TTS
@@ -1147,46 +863,58 @@
                 await new Promise(resolve => setTimeout(resolve, 500));
                 this.updateStatus('tts', 'TTS Test Passed ✓', 'ready');
                 
-                this.updateVoiceStatus('All real AI models tested successfully!');
+                this.updateVoiceStatus('All Pollinations AI services tested successfully!');
             }
 
-            async switchBackend() {
-                const currentStatus = this.modelManager.getAllModelsStatus();
-                const supportedBackends = currentStatus.supportedBackends;
-                const currentIndex = supportedBackends.indexOf(currentStatus.currentBackend);
-                const nextIndex = (currentIndex + 1) % supportedBackends.length;
-                const newBackend = supportedBackends[nextIndex];
-                
+            async generateImagePrompt() {
+                const prompt = window.prompt('Enter an image description:', 'A beautiful sunset over mountains');
+                if (prompt) {
+                    await this.generateImage(prompt);
+                }
+            }
+
+            async generateImage(prompt) {
                 try {
-                    await this.modelManager.switchBackend(newBackend);
-                    this.updateBackendIndicator();
-                    this.updateVoiceStatus(`Switched to ${newBackend} backend. Models need to be reloaded.`);
+                    this.updateVoiceStatus('Generating image with Pollinations AI...');
+                    
+                    const result = await this.modelManager.generateImage(prompt, {
+                        width: 512,
+                        height: 512,
+                        model: 'flux'
+                    });
+                    
+                    if (result.success) {
+                        // Display the generated image in the conversation
+                        const imageMessage = document.createElement('div');
+                        imageMessage.className = 'message assistant';
+                        imageMessage.innerHTML = `
+                            <div class="message-content">
+                                <p>Generated image: "${prompt}"</p>
+                                <img src="${result.imageUrl}" alt="${prompt}" style="max-width: 100%; border-radius: 8px; margin-top: 8px;">
+                            </div>
+                            <div class="message-time">${new Date().toLocaleTimeString()}</div>
+                        `;
+                        
+                        this.elements.conversation.appendChild(imageMessage);
+                        this.elements.conversation.scrollTop = this.elements.conversation.scrollHeight;
+                        
+                        this.updateVoiceStatus('Image generated successfully!');
+                    } else {
+                        this.updateVoiceStatus('Image generation failed: ' + result.error);
+                    }
+                    
                 } catch (error) {
-                    this.updateVoiceStatus(`Failed to switch to ${newBackend} backend: ${error.message}`);
+                    console.error('Image generation error:', error);
+                    this.updateVoiceStatus('Image generation failed. Please try again.');
                 }
             }
 
             updateBackendIndicator() {
                 const indicator = this.elements.backendIndicator;
                 const text = this.elements.backendText;
-                const status = this.modelManager.getAllModelsStatus();
-                const currentBackend = status.currentBackend;
                 
                 indicator.className = 'backend-indicator';
-                
-                switch (currentBackend) {
-                    case 'webgpu':
-                        indicator.classList.add('backend-webgpu');
-                        text.textContent = `WebGPU Backend (Hardware Accelerated)`;
-                        break;
-                    case 'wasm':
-                        indicator.classList.add('backend-webassembly');
-                        text.textContent = `WebAssembly Backend (Optimized)`;
-                        break;
-                    default:
-                        indicator.classList.add('backend-cpu');
-                        text.textContent = `CPU Backend (Fallback)`;
-                }
+                text.textContent = 'Pollinations AI Cloud Services (High Performance)';
             }
 
             updateStatus(type, message, status) {
@@ -1208,103 +936,10 @@
             }
         }
 
-        // Model selection functionality
-        class ModelSelector {
-            constructor() {
-                this.selectedModel = null;
-                this.customModels = [];
-                this.setupEventListeners();
-            }
-
-            setupEventListeners() {
-                // Model card selection
-                document.querySelectorAll('.model-card').forEach(card => {
-                    card.addEventListener('click', () => this.selectModel(card));
-                });
-
-                // Custom model input
-                document.getElementById('add-custom-model').addEventListener('click', () => this.addCustomModel());
-                document.getElementById('custom-model-url').addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') this.addCustomModel();
-                });
-
-                // Start app button
-                document.getElementById('start-app').addEventListener('click', () => this.startApp());
-            }
-
-            selectModel(card) {
-                // Remove previous selection
-                document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
-                
-                // Select new model
-                card.classList.add('selected');
-                this.selectedModel = card.dataset.model;
-                
-                // Enable start button
-                document.getElementById('start-app').disabled = false;
-            }
-
-            addCustomModel() {
-                const input = document.getElementById('custom-model-url');
-                const modelUrl = input.value.trim();
-                
-                if (!modelUrl) return;
-
-                // Create custom model card
-                const modelCard = document.createElement('div');
-                modelCard.className = 'model-card';
-                modelCard.dataset.model = modelUrl;
-                modelCard.innerHTML = `
-                    <h4>Custom Model</h4>
-                    <p>${modelUrl}</p>
-                    <div class="model-stats">
-                        <span>Speed: ❓</span>
-                        <span>Quality: ❓</span>
-                    </div>
-                `;
-
-                // Add to grid
-                document.querySelector('.model-grid').appendChild(modelCard);
-                
-                // Add event listener
-                modelCard.addEventListener('click', () => this.selectModel(modelCard));
-                
-                // Select it automatically
-                this.selectModel(modelCard);
-                
-                // Clear input
-                input.value = '';
-            }
-
-            startApp() {
-                if (!this.selectedModel) return;
-
-                // Hide model selection screen
-                document.getElementById('model-selection').style.display = 'none';
-                
-                // Show main app
-                document.getElementById('main-app').style.display = 'block';
-                
-                // Update subtitle with selected model
-                const modelName = this.selectedModel.split('/').pop();
-                document.getElementById('model-subtitle').textContent = 
-                    `Real-time AI with Whisper + ${modelName} • Privacy-first • WebGPU accelerated`;
-                
-                // Initialize voice assistant with selected model
-                window.selectedModel = this.selectedModel;
-                new VoiceAssistantOptimized();
-            }
-        }
-
-        // Initialize model selector when page loads
+        // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            new ModelSelector();
+            new VoiceAssistantPollinations();
         });
-
-        // Service Worker registration for PWA (commented out to avoid data: URL issues)
-        // if ('serviceWorker' in navigator) {
-        //     navigator.serviceWorker.register('data:text/javascript,console.log("Service Worker registered")');
-        // }
     </script>
 </body>
 </html>
