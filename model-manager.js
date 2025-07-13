@@ -398,19 +398,20 @@ class ModelManager {
     mapToMediaPipeModel(modelName) {
         const modelLower = modelName.toLowerCase();
         
+        // Prioritize Q4 quantized models for better performance
         if (modelLower.includes('gemma-3-1b') || modelLower.includes('gemma3-1b') || modelLower.includes('gemma-1b')) {
-            return 'gemma-3-1b-it';
+            return 'gemma-3-1b-it-q4'; // Use Q4 quantized version for speed
         } else if (modelLower.includes('gemma-2b') || modelLower.includes('gemma2b')) {
-            // Legacy Gemma 2B references - redirect to Gemma 3 1B
-            return 'gemma-3-1b-it';
+            // Legacy Gemma 2B references - redirect to Gemma 3 1B Q4
+            return 'gemma-3-1b-it-q4';
         } else if (modelLower.includes('gemma-7b') || modelLower.includes('gemma7b')) {
             return 'gemma-7b-it';
         } else if (modelLower.includes('gemma')) {
-            // Default to Gemma 3 1B for unknown Gemma variants
-            return 'gemma-3-1b-it';
+            // Default to Gemma 3 1B Q4 for unknown Gemma variants
+            return 'gemma-3-1b-it-q4';
         } else {
             // Default fallback for non-Gemma models
-            return 'gemma-3-1b-it';
+            return 'gemma-3-1b-it-q4';
         }
     }
 

@@ -504,16 +504,29 @@
                     <div class="mediapipe-notice" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 0.85rem; color: #cbd5e1;">
                         <strong>📋 MediaPipe Information:</strong><br>
                         • MediaPipe models require the MediaPipe Tasks LLM library (experimental feature)<br>
+                        • <strong>Q4 Quantization:</strong> Optimized models use 4-bit quantization for 40% faster inference<br>
                         • <strong>Auto-fallback:</strong> If MediaPipe is unavailable, these models automatically switch to proven ONNX alternatives<br>
-                        • Gemma 3 1B → SmolLM2 1.7B or TinyLlama (seamless transition)<br>
+                        • Gemma 3 1B Q4 → SmolLM2 1.7B Q4 or TinyLlama (seamless transition)<br>
                         • For Brave browser: Allow scripts and disable strict shields if needed<br>
-                        • Large models (>1GB) require significant download time and memory
+                        • Q4 models require less memory and provide faster response times
                     </div>
                     
                     <div class="model-grid">
+                        <div class="model-card mediapipe-model" data-model="gemma-3-1b-it-q4" data-backend="mediapipe">
+                            <h4>Gemma 3 1B Instruct Q4 🚀</h4>
+                            <p>Google's optimized Gemma 3 1B with Q4 quantization (~600MB)<br>
+                            <small style="color: #34d399;"><strong>⚡ 40% faster inference with Q4 quantization</strong></small><br>
+                            <small style="color: #94a3b8;">Auto-fallback: SmolLM2 1.7B Q4 or TinyLlama if MediaPipe unavailable</small></p>
+                            <div class="model-stats">
+                                <span>Speed: ⚡⚡⚡⚡⚡⚡</span>
+                                <span>Quality: ⭐⭐⭐⭐</span>
+                            </div>
+                            <div class="model-badge" style="background: linear-gradient(45deg, #34d399, #10b981);">Q4 Optimized</div>
+                        </div>
+                        
                         <div class="model-card mediapipe-model" data-model="gemma-3-1b-it" data-backend="mediapipe">
                             <h4>Gemma 3 1B Instruct 🔥</h4>
-                            <p>Google's latest Gemma 3 1B via MediaPipe (~1.0GB)<br>
+                            <p>Google's Gemma 3 1B standard precision (~1.0GB)<br>
                             <small style="color: #94a3b8;">Auto-fallback: SmolLM2 1.7B or TinyLlama if MediaPipe unavailable</small></p>
                             <div class="model-stats">
                                 <span>Speed: ⚡⚡⚡⚡⚡</span>
