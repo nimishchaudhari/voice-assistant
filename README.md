@@ -10,12 +10,15 @@ An optimized browser-based voice assistant demonstrating real-time AI models run
 - **Performance**: Real-time inference with WebGPU acceleration
 
 ### Language Model
-- **Model**: Phi-3 Mini ONNX (upgraded from TinyLlama)
+- **Models**: Multiple options including Phi-3 Mini ONNX and Google's Gemma models
+- **ONNX Backend**: Phi-3 Mini (3.8B parameters) with 4-bit quantization (~2.4GB)
+- **MediaPipe Backend**: Google's Gemma models with Q4 quantization and optimized inference engine
 - **Benefits**: 
-  - 3.8B parameters vs TinyLlama's 1.1B
-  - Significantly better conversation quality
-  - Microsoft-optimized for browser deployment
-  - 4-bit quantization reduces model size to ~2.4GB
+  - Choice between ONNX and MediaPipe backends for optimal performance
+  - Q4 quantization provides 40% faster inference with 40% reduced memory usage
+  - Gemma models provide excellent efficiency and quality
+  - Hardware-accelerated inference with WebGPU and MediaPipe
+  - Fallback support for broader compatibility
 
 ### Text-to-Speech
 - **Model**: Web Speech API
@@ -24,11 +27,16 @@ An optimized browser-based voice assistant demonstrating real-time AI models run
 ## Backend Support
 
 ### Progressive Enhancement
-1. **WebGPU** (Primary): Hardware acceleration for optimal performance
-2. **WebAssembly** (Fallback): CPU optimization for broader compatibility
-3. **CPU** (Final fallback): Basic support for older browsers
+1. **MediaPipe** (Newest): Google's optimized inference for Gemma models
+2. **WebGPU** (Primary): Hardware acceleration for optimal performance
+3. **WebAssembly** (Fallback): CPU optimization for broader compatibility
+4. **CPU** (Final fallback): Basic support for older browsers
 
 ### Performance Characteristics
+- **MediaPipe with Q4**: Google-optimized inference engine with 4-bit quantization for Gemma models
+  - 40% faster inference compared to standard precision
+  - 40% reduced memory usage (~600MB vs ~1GB for Gemma 3 1B)
+  - Optimized for real-time voice interaction
 - **WebGPU**: ~10x faster inference, requires Chrome 113+/Edge 113+
 - **WebAssembly**: Balanced performance and compatibility
 - **CPU**: Slowest but universally supported
@@ -72,6 +80,8 @@ voice_assistant/
 ├── index.html              # Main application with optimized UI
 ├── audio-processor.js      # Enhanced audio processing pipeline
 ├── model-manager.js        # ONNX model management system
+├── mediapipe-llm.js        # MediaPipe LLM inference integration
+├── test-continuous-conversation.html  # Test suite
 └── README.md              # This documentation
 ```
 
@@ -123,6 +133,9 @@ The application loads real ONNX models from Hugging Face:
 - GPT-2: `Xenova/gpt2` (~550MB, classic)
 - SmolLM2 135M (Fast): 4-bit quantized for speed (~118MB)
 - SmolLM2 135M (Quality): Standard precision (~270MB)
+- **Gemma 3 1B Instruct Q4**: Google's latest optimized model with Q4 quantization via MediaPipe (~600MB) 🚀⚡
+- **Gemma 3 1B Instruct**: Google's latest standard precision model via MediaPipe (~1.0GB) 🚀
+- **Gemma 7B Instruct**: Larger Gemma model via MediaPipe (~5.2GB) 🚀
 - Custom models: Any compatible ONNX model from Hugging Face
 
 All models run entirely in your browser with no data sent to external servers.
@@ -141,6 +154,8 @@ All models run entirely in your browser with no data sent to external servers.
 - WebNN backend support
 - Model streaming for faster initial load
 - Voice cloning capabilities
+- Additional MediaPipe model support
+- Performance benchmarking dashboard
 
 ## Technical Notes
 

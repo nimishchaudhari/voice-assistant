@@ -25,6 +25,10 @@ class ModelManager {
         this.supportedBackends = [];
         this.currentBackend = null;
         this.isInitialized = false;
+        
+        // MediaPipe integration
+        this.mediaPipeLLM = null;
+        this.useMediaPipe = window.selectedBackend === 'mediapipe';
     }
 
     async initialize() {
@@ -44,9 +48,13 @@ class ModelManager {
             // Detect supported devices
             await this.detectSupportedDevices();
             
+            // Initialize MediaPipe LLM if available
+            await this.initializeMediaPipe();
+            
             this.isInitialized = true;
             console.log('Real AI Model Manager initialized');
             console.log('Supported devices:', this.supportedDevices);
+            console.log('MediaPipe available:', this.mediaPipeLLM !== null);
             
         } catch (error) {
             console.error('Model Manager initialization failed:', error);
@@ -82,7 +90,51 @@ class ModelManager {
         
         // Set supported backends and current backend
         this.supportedBackends = [...this.supportedDevices];
+        
+        // Add MediaPipe backend if available
+        if (typeof window.MediaPipeLLM !== 'undefined') {
+            this.supportedBackends.push('mediapipe');
+        }
+        
         this.currentBackend = bestDevice;
+    }
+
+    async initializeMediaPipe() {
+        try {
+            // Check if MediaPipe LLM is available
+            if (typeof window.MediaPipeLLM !== 'undefined') {
+                console.log('MediaPipeLLM class found, attempting to initialize...');
+                
+                this.mediaPipeLLM = new window.MediaPipeLLM();
+                
+                // Test MediaPipe initialization with shorter timeout for faster feedback
+                const initTimeout = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('MediaPipe library not available')), 2000);
+                });
+                
+                const initPromise = this.mediaPipeLLM.initialize();
+                
+                try {
+                    await Promise.race([initPromise, initTimeout]);
+                    console.log('MediaPipe LLM integration initialized successfully');
+                } catch (error) {
+                    console.warn('MediaPipe initialization failed during test:', error.message);
+                    // Set to null to indicate MediaPipe not working
+                    this.mediaPipeLLM = null;
+                    this.useMediaPipe = false;
+                    
+                    // Don't throw here - let the calling code handle fallback
+                }
+            } else {
+                console.log('MediaPipe LLM class not available - falling back to ONNX models');
+                this.mediaPipeLLM = null;
+                this.useMediaPipe = false;
+            }
+        } catch (error) {
+            console.warn('MediaPipe initialization failed:', error.message);
+            this.mediaPipeLLM = null;
+            this.useMediaPipe = false;
+        }
     }
 
     async loadModel(modelName, progressCallback = null) {
@@ -90,6 +142,11 @@ class ModelManager {
             const config = this.config[modelName];
             if (!config) {
                 throw new Error(`Unknown model: ${modelName}`);
+            }
+
+            // Check if this should use MediaPipe
+            if (modelName === 'textgen' && this.shouldUseMediaPipe(config.modelName)) {
+                return await this.loadMediaPipeModel(config.modelName, progressCallback);
             }
 
             if (progressCallback) progressCallback(0, `Loading real ${modelName} model...`);
@@ -145,7 +202,8 @@ class ModelManager {
                 config,
                 device: deviceToUse,
                 loaded: true,
-                realModel: true
+                realModel: true,
+                backend: 'onnx'
             });
 
             if (progressCallback) progressCallback(100, `${modelName} ready! (Real AI model loaded)`);
@@ -164,6 +222,196 @@ class ModelManager {
             
             if (progressCallback) progressCallback(-1, `Failed to load ${modelName}`);
             throw error;
+        }
+    }
+
+    shouldUseMediaPipe(modelName) {
+        // Check if model is better suited for MediaPipe
+        const modelLower = modelName.toLowerCase();
+        
+        // Use MediaPipe for pure Gemma models (not ONNX versions)
+        if (modelLower.includes('gemma') && !modelLower.includes('xenova')) {
+            return true;
+        }
+        
+        // Use MediaPipe if explicitly requested
+        if (this.useMediaPipe) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    async loadMediaPipeModel(modelName, progressCallback = null) {
+        try {
+            if (!this.mediaPipeLLM) {
+                throw new Error('MediaPipe LLM not available - MediaPipe library not loaded');
+            }
+
+            if (progressCallback) progressCallback(5, 'Initializing MediaPipe LLM...');
+
+            // Initialize MediaPipe if not already done - with shorter timeout
+            if (!this.mediaPipeLLM.isInitialized) {
+                if (progressCallback) progressCallback(10, 'Testing MediaPipe library availability...');
+                
+                // Reduced timeout for faster fallback
+                const initTimeout = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('MediaPipe library not found - falling back to ONNX models')), 2000);
+                });
+                
+                try {
+                    await Promise.race([this.mediaPipeLLM.initialize(), initTimeout]);
+                    if (progressCallback) progressCallback(25, 'MediaPipe initialized successfully');
+                } catch (error) {
+                    console.warn('MediaPipe initialization failed quickly:', error.message);
+                    throw new Error(`MediaPipe unavailable: ${error.message.includes('timeout') ? 'Library not loaded' : error.message}`);
+                }
+            }
+
+            // Map model names to MediaPipe model IDs
+            const mediaPipeModelId = this.mapToMediaPipeModel(modelName);
+            if (progressCallback) progressCallback(30, `Loading MediaPipe model: ${mediaPipeModelId}...`);
+            
+            // Load the MediaPipe model with shorter timeout for faster fallback
+            const loadTimeout = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('MediaPipe model loading timeout - falling back to ONNX')), 15000);
+            });
+            
+            const loadPromise = this.mediaPipeLLM.loadModel(mediaPipeModelId, progressCallback);
+            
+            await Promise.race([loadPromise, loadTimeout]);
+
+            // Store the MediaPipe model reference
+            this.models.set('textgen', {
+                mediaPipeLLM: this.mediaPipeLLM,
+                modelId: mediaPipeModelId,
+                config: this.config.textgen,
+                loaded: true,
+                realModel: true,
+                backend: 'mediapipe'
+            });
+
+            this.useMediaPipe = true;
+            if (progressCallback) progressCallback(100, `MediaPipe ${mediaPipeModelId} ready!`);
+            console.log(`MediaPipe model ${mediaPipeModelId} loaded successfully`);
+            return true;
+
+        } catch (error) {
+            console.warn('MediaPipe model loading failed:', error.message);
+            
+            // Always attempt fallback for MediaPipe issues
+            console.log('Attempting fallback to ONNX models...');
+            if (progressCallback) progressCallback(15, 'MediaPipe unavailable, switching to ONNX models...');
+            
+            // Reset MediaPipe usage flag
+            this.useMediaPipe = false;
+            
+            // Try to load equivalent ONNX model instead
+            const fallbackModels = this.getFallbackONNXModel(modelName);
+            
+            if (fallbackModels) {
+                const modelList = Array.isArray(fallbackModels) ? fallbackModels : [fallbackModels];
+                const originalModelName = this.config.textgen.modelName;
+                
+                for (let i = 0; i < modelList.length; i++) {
+                    const fallbackModel = modelList[i];
+                    console.log(`Trying ONNX fallback ${i + 1}/${modelList.length}: ${fallbackModel}`);
+                    this.config.textgen.modelName = fallbackModel;
+                    
+                    try {
+                        const result = await this.loadModel('textgen', (progress, message) => {
+                            if (progressCallback) {
+                                progressCallback(20 + (progress * 0.7), `Loading ${fallbackModel.split('/').pop()}... ${progress}%`);
+                            }
+                        });
+                        
+                        console.log(`Successfully loaded ONNX fallback: ${fallbackModel}`);
+                        if (progressCallback) progressCallback(100, `${fallbackModel.split('/').pop()} ready! (ONNX fallback)`);
+                        return result;
+                    } catch (fallbackError) {
+                        console.warn(`ONNX fallback ${i + 1} failed: ${fallbackError.message}`);
+                        
+                        // If this is the last attempt, continue to final fallback
+                        if (i === modelList.length - 1) {
+                            break;
+                        }
+                    }
+                }
+                
+                // All primary fallbacks failed, try final emergency fallback
+                console.warn('All primary fallbacks failed, trying emergency fallback...');
+                const emergencyFallback = 'HuggingFaceTB/SmolLM2-135M-Instruct';
+                this.config.textgen.modelName = emergencyFallback;
+                
+                try {
+                    const result = await this.loadModel('textgen', (progress, message) => {
+                        if (progressCallback) {
+                            progressCallback(20 + (progress * 0.7), `Emergency fallback: ${message}`);
+                        }
+                    });
+                    
+                    console.log('Successfully loaded emergency fallback model');
+                    if (progressCallback) progressCallback(100, `${emergencyFallback.split('/').pop()} ready! (Emergency fallback)`);
+                    return result;
+                } catch (emergencyError) {
+                    // Restore original model name and re-throw
+                    this.config.textgen.modelName = originalModelName;
+                    throw new Error(`All fallback attempts failed. MediaPipe: ${error.message}, Final fallback: ${emergencyError.message}`);
+                }
+            } else {
+                throw new Error(`MediaPipe model loading failed and no suitable ONNX fallback found: ${error.message}`);
+            }
+        }
+    }
+
+    getFallbackONNXModel(mediaPipeModelName) {
+        // Map MediaPipe models to suitable ONNX alternatives that actually exist
+        const modelLower = mediaPipeModelName.toLowerCase();
+        
+        if (modelLower.includes('gemma-3-1b') || modelLower.includes('gemma3-1b')) {
+            // Since Gemma 3 1B ONNX versions are not widely available yet,
+            // fallback to proven working models with similar capabilities
+            return [
+                'HuggingFaceTB/SmolLM2-1.7B-Instruct',     // Best size match, proven to work
+                'Xenova/TinyLlama-1.1B-Chat-v1.0',        // Reliable fallback 
+                'HuggingFaceTB/SmolLM2-135M-Instruct'      // Smaller but very fast
+            ];
+        } else if (modelLower.includes('gemma-2b') || modelLower.includes('gemma2b')) {
+            // Legacy Gemma 2B references - use efficient fallback
+            return 'HuggingFaceTB/SmolLM2-1.7B-Instruct';
+        } else if (modelLower.includes('gemma-7b') || modelLower.includes('gemma7b')) {
+            // Fallback to a capable model for Gemma 7B
+            return 'Xenova/TinyLlama-1.1B-Chat-v1.0';
+        } else if (modelLower.includes('gemma')) {
+            // Default fallback for any Gemma model
+            return [
+                'HuggingFaceTB/SmolLM2-1.7B-Instruct',
+                'Xenova/TinyLlama-1.1B-Chat-v1.0',
+                'HuggingFaceTB/SmolLM2-135M-Instruct'
+            ];
+        }
+        
+        // No suitable fallback found
+        return null;
+    }
+
+    mapToMediaPipeModel(modelName) {
+        const modelLower = modelName.toLowerCase();
+        
+        // Prioritize Q4 quantized models for better performance
+        if (modelLower.includes('gemma-3-1b') || modelLower.includes('gemma3-1b') || modelLower.includes('gemma-1b')) {
+            return 'gemma-3-1b-it-q4'; // Use Q4 quantized version for speed
+        } else if (modelLower.includes('gemma-2b') || modelLower.includes('gemma2b')) {
+            // Legacy Gemma 2B references - redirect to Gemma 3 1B Q4
+            return 'gemma-3-1b-it-q4';
+        } else if (modelLower.includes('gemma-7b') || modelLower.includes('gemma7b')) {
+            return 'gemma-7b-it';
+        } else if (modelLower.includes('gemma')) {
+            // Default to Gemma 3 1B Q4 for unknown Gemma variants
+            return 'gemma-3-1b-it-q4';
+        } else {
+            // Default fallback for non-Gemma models
+            return 'gemma-3-1b-it-q4';
         }
     }
 
@@ -213,7 +461,12 @@ class ModelManager {
         try {
             console.log('Running real text generation...');
             
-            // Format prompt based on model type
+            // Check if using MediaPipe backend
+            if (model.backend === 'mediapipe') {
+                return await this.runMediaPipeGeneration(model, prompt, maxTokens, streamCallback);
+            }
+            
+            // Original ONNX-based generation
             const formattedPrompt = this.formatPromptForModel(prompt, this.config.textgen.modelName);
             
             if (streamCallback) {
@@ -241,6 +494,28 @@ class ModelManager {
 
         } catch (error) {
             console.error('Real text generation failed:', error);
+            throw error;
+        }
+    }
+
+    async runMediaPipeGeneration(model, prompt, maxTokens, streamCallback) {
+        try {
+            console.log('Using MediaPipe for text generation');
+            
+            const options = {
+                maxTokens,
+                temperature: 0.7,
+                topK: 40,
+                topP: 0.9,
+                streamCallback
+            };
+
+            const response = await model.mediaPipeLLM.generateText(prompt, options);
+            console.log('MediaPipe generated response:', response);
+            return response;
+
+        } catch (error) {
+            console.error('MediaPipe generation failed:', error);
             throw error;
         }
     }
@@ -358,7 +633,8 @@ class ModelManager {
         } else if (model.includes('phi')) {
             return `<|user|>\n${prompt}<|end|>\n<|assistant|>\n`;
         } else if (model.includes('gemma')) {
-            return `<bos><start_of_turn>user\n${prompt}<end_of_turn>\n<start_of_turn>model\n`;
+            const systemPrompt = `You are an intelligent voice assistant. Respond naturally and conversationally as if speaking to a friend. Keep answers brief and to the point - aim for 1-2 sentences unless the user asks for more detail. Use simple, clear language without technical jargon. Avoid using markdown, special formatting, or numbered lists in your responses. Be helpful, friendly, and direct.`;
+            return `<bos><start_of_turn>system\n${systemPrompt}<end_of_turn>\n<start_of_turn>user\n${prompt}<end_of_turn>\n<start_of_turn>model\n`;
         } else if (model.includes('llama')) {
             return `<s>[INST] ${prompt} [/INST]`;
         } else if (model.includes('gpt2') || model.includes('distilgpt2')) {
@@ -473,6 +749,13 @@ class ModelManager {
         }
         status.currentBackend = this.currentBackend;
         status.supportedBackends = this.supportedBackends;
+        status.mediaPipeAvailable = this.mediaPipeLLM !== null;
+        status.usingMediaPipe = this.useMediaPipe;
+        
+        if (this.mediaPipeLLM) {
+            status.mediaPipeInfo = this.mediaPipeLLM.getPerformanceInfo();
+        }
+        
         return status;
     }
 
@@ -524,6 +807,12 @@ class ModelManager {
         // Clean up all models
         for (const modelName of this.models.keys()) {
             this.unloadModel(modelName);
+        }
+        
+        // Clean up MediaPipe if available
+        if (this.mediaPipeLLM) {
+            this.mediaPipeLLM.cleanup();
+            this.mediaPipeLLM = null;
         }
         
         console.log('Model Manager cleaned up');

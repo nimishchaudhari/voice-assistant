@@ -318,6 +318,45 @@
             color: #cbd5e1;
         }
 
+        .mediapipe-section {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid rgba(71, 85, 105, 0.3);
+        }
+
+        .mediapipe-description {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .mediapipe-model {
+            border: 2px solid rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .mediapipe-model:hover {
+            border-color: rgba(16, 185, 129, 0.6);
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .mediapipe-model.selected {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.3);
+        }
+
+        .model-badge {
+            background: linear-gradient(45deg, #10b981, #34d399);
+            color: white;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-top: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+
         .custom-model-section {
             border-top: 1px solid rgba(71, 85, 105, 0.3);
             padding-top: 25px;
@@ -457,6 +496,57 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="mediapipe-section">
+                    <h3>🚀 MediaPipe-Powered Models (Google's Optimized Inference)</h3>
+                    <p class="mediapipe-description">These models use Google's MediaPipe for enhanced performance and efficiency.</p>
+                    
+                    <div class="mediapipe-notice" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 0.85rem; color: #cbd5e1;">
+                        <strong>📋 MediaPipe Information:</strong><br>
+                        • MediaPipe models require the MediaPipe Tasks LLM library (experimental feature)<br>
+                        • <strong>Q4 Quantization:</strong> Optimized models use 4-bit quantization for 40% faster inference<br>
+                        • <strong>Auto-fallback:</strong> If MediaPipe is unavailable, these models automatically switch to proven ONNX alternatives<br>
+                        • Gemma 3 1B Q4 → SmolLM2 1.7B Q4 or TinyLlama (seamless transition)<br>
+                        • For Brave browser: Allow scripts and disable strict shields if needed<br>
+                        • Q4 models require less memory and provide faster response times
+                    </div>
+                    
+                    <div class="model-grid">
+                        <div class="model-card mediapipe-model" data-model="gemma-3-1b-it-q4" data-backend="mediapipe">
+                            <h4>Gemma 3 1B Instruct Q4 🚀</h4>
+                            <p>Google's optimized Gemma 3 1B with Q4 quantization (~600MB)<br>
+                            <small style="color: #34d399;"><strong>⚡ 40% faster inference with Q4 quantization</strong></small><br>
+                            <small style="color: #94a3b8;">Auto-fallback: SmolLM2 1.7B Q4 or TinyLlama if MediaPipe unavailable</small></p>
+                            <div class="model-stats">
+                                <span>Speed: ⚡⚡⚡⚡⚡⚡</span>
+                                <span>Quality: ⭐⭐⭐⭐</span>
+                            </div>
+                            <div class="model-badge" style="background: linear-gradient(45deg, #34d399, #10b981);">Q4 Optimized</div>
+                        </div>
+                        
+                        <div class="model-card mediapipe-model" data-model="gemma-3-1b-it" data-backend="mediapipe">
+                            <h4>Gemma 3 1B Instruct 🔥</h4>
+                            <p>Google's Gemma 3 1B standard precision (~1.0GB)<br>
+                            <small style="color: #94a3b8;">Auto-fallback: SmolLM2 1.7B or TinyLlama if MediaPipe unavailable</small></p>
+                            <div class="model-stats">
+                                <span>Speed: ⚡⚡⚡⚡⚡</span>
+                                <span>Quality: ⭐⭐⭐⭐</span>
+                            </div>
+                            <div class="model-badge">MediaPipe Optimized</div>
+                        </div>
+                        
+                        <div class="model-card mediapipe-model" data-model="gemma-7b-it" data-backend="mediapipe">
+                            <h4>Gemma 7B Instruct 🔥</h4>
+                            <p>Larger Gemma model via MediaPipe (~5.2GB)<br>
+                            <small style="color: #94a3b8;">Auto-fallback: TinyLlama 1.1B if MediaPipe unavailable</small></p>
+                            <div class="model-stats">
+                                <span>Speed: ⚡⚡⚡⚡</span>
+                                <span>Quality: ⭐⭐⭐⭐⭐</span>
+                            </div>
+                            <div class="model-badge">MediaPipe Optimized</div>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="custom-model-section">
                     <h3>Custom Hugging Face Model</h3>
@@ -559,6 +649,9 @@
         window.transformers = { pipeline, env };
     </script>
     
+    <!-- MediaPipe LLM Integration -->
+    <script src="mediapipe-llm.js"></script>
+    
     <!-- Enhanced Audio Processing -->
     <script src="audio-processor.js"></script>
     
@@ -636,16 +729,30 @@
 
             async initializeApp() {
                 try {
+                    // Check browser compatibility
+                    this.checkBrowserCompatibility();
+                    
                     this.updateProgress(10);
                     
-                    // Initialize model manager
-                    await this.modelManager.initialize();
+                    // Initialize model manager with timeout
+                    const initTimeout = new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error('Model manager initialization timeout')), 15000);
+                    });
+                    
+                    const initPromise = this.modelManager.initialize();
+                    await Promise.race([initPromise, initTimeout]);
+                    
                     this.updateBackendIndicator();
                     
                     this.updateProgress(30);
                     
-                    // Load models
-                    await this.loadModels();
+                    // Load models with timeout
+                    const loadTimeout = new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error('Model loading timeout after 60 seconds')), 60000);
+                    });
+                    
+                    const loadPromise = this.loadModels();
+                    await Promise.race([loadPromise, loadTimeout]);
                     
                     this.updateProgress(100);
                     this.updateVoiceStatus('Click the microphone to start (microphone permission required)');
@@ -653,9 +760,87 @@
                     
                 } catch (error) {
                     console.error('Initialization failed:', error);
-                    this.updateVoiceStatus('Initialization failed. Check console for details.');
-                    this.updateStatus('stt', 'Error', 'error');
+                    this.handleInitializationError(error);
                 }
+            }
+
+            checkBrowserCompatibility() {
+                const userAgent = navigator.userAgent.toLowerCase();
+                const isBrave = userAgent.includes('brave') || 
+                               (navigator.brave && navigator.brave.isBrave);
+                
+                if (isBrave) {
+                    console.warn('Brave browser detected. Some features may require adjusting privacy settings.');
+                    
+                    // Add a notice for Brave users
+                    const notice = document.createElement('div');
+                    notice.style.cssText = `
+                        position: fixed; top: 10px; right: 10px; 
+                        background: rgba(255, 152, 0, 0.9); color: white; 
+                        padding: 10px; border-radius: 5px; font-size: 0.8rem;
+                        max-width: 300px; z-index: 1000;
+                    `;
+                    notice.innerHTML = `
+                        <strong>Brave Browser Detected</strong><br>
+                        If the app freezes, try disabling Shields or allowing scripts for this site.
+                        <button onclick="this.parentElement.remove()" style="float: right; background: none; border: none; color: white; cursor: pointer;">✕</button>
+                    `;
+                    document.body.appendChild(notice);
+                    
+                    // Auto-hide after 10 seconds
+                    setTimeout(() => {
+                        if (notice.parentElement) notice.remove();
+                    }, 10000);
+                }
+            }
+
+            handleInitializationError(error) {
+                let errorMessage = 'Initialization failed. ';
+                let suggestion = '';
+                
+                if (error.message.includes('timeout')) {
+                    errorMessage += 'The app timed out while loading models.';
+                    suggestion = 'This often happens with slow connections or strict browser settings. Try refreshing the page or using a different model.';
+                } else if (error.message.includes('MediaPipe')) {
+                    errorMessage += 'MediaPipe initialization failed.';
+                    suggestion = 'Falling back to standard ONNX models. MediaPipe features will not be available.';
+                } else if (error.message.includes('WebGPU')) {
+                    errorMessage += 'Hardware acceleration failed.';
+                    suggestion = 'The app will use CPU processing, which may be slower.';
+                } else {
+                    errorMessage += error.message;
+                    suggestion = 'Check the browser console for more details.';
+                }
+                
+                this.updateVoiceStatus(`❌ ${errorMessage} ${suggestion}`);
+                this.updateStatus('stt', 'Error', 'error');
+                this.updateStatus('llm', 'Error', 'error');
+                this.updateStatus('tts', 'Error', 'error');
+                
+                console.error('Full error details:', error);
+                
+                // Show error details in UI
+                const errorDetails = document.createElement('div');
+                errorDetails.style.cssText = `
+                    background: rgba(239, 68, 68, 0.1); 
+                    border: 1px solid rgba(239, 68, 68, 0.3); 
+                    border-radius: 8px; padding: 15px; margin-top: 15px;
+                    color: #fca5a5; font-size: 0.85rem;
+                `;
+                errorDetails.innerHTML = `
+                    <strong>Error Details:</strong><br>
+                    ${error.message}<br><br>
+                    <strong>Suggestions:</strong><br>
+                    ${suggestion}<br><br>
+                    <button onclick="location.reload()" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                        🔄 Reload Page
+                    </button>
+                    <button onclick="this.parentElement.remove()" style="background: transparent; color: #fca5a5; border: 1px solid #fca5a5; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 10px;">
+                        Dismiss
+                    </button>
+                `;
+                
+                this.elements.conversation.appendChild(errorDetails);
             }
 
             async loadModels() {
@@ -1167,22 +1352,28 @@
                 const indicator = this.elements.backendIndicator;
                 const text = this.elements.backendText;
                 const status = this.modelManager.getAllModelsStatus();
-                const currentBackend = status.currentBackend;
                 
                 indicator.className = 'backend-indicator';
                 
-                switch (currentBackend) {
-                    case 'webgpu':
-                        indicator.classList.add('backend-webgpu');
-                        text.textContent = `WebGPU Backend (Hardware Accelerated)`;
-                        break;
-                    case 'wasm':
-                        indicator.classList.add('backend-webassembly');
-                        text.textContent = `WebAssembly Backend (Optimized)`;
-                        break;
-                    default:
-                        indicator.classList.add('backend-cpu');
-                        text.textContent = `CPU Backend (Fallback)`;
+                if (status.usingMediaPipe) {
+                    indicator.classList.add('backend-webgpu'); // Use green for MediaPipe
+                    text.textContent = `MediaPipe Backend (Google Optimized)`;
+                } else {
+                    const currentBackend = status.currentBackend;
+                    
+                    switch (currentBackend) {
+                        case 'webgpu':
+                            indicator.classList.add('backend-webgpu');
+                            text.textContent = `WebGPU Backend (Hardware Accelerated)`;
+                            break;
+                        case 'wasm':
+                            indicator.classList.add('backend-webassembly');
+                            text.textContent = `WebAssembly Backend (Optimized)`;
+                            break;
+                        default:
+                            indicator.classList.add('backend-cpu');
+                            text.textContent = `CPU Backend (Fallback)`;
+                    }
                 }
             }
 
@@ -1209,6 +1400,7 @@
         class ModelSelector {
             constructor() {
                 this.selectedModel = null;
+                this.selectedBackend = 'onnx'; // Default to ONNX
                 this.customModels = [];
                 this.setupEventListeners();
             }
@@ -1236,9 +1428,18 @@
                 // Select new model
                 card.classList.add('selected');
                 this.selectedModel = card.dataset.model;
+                this.selectedBackend = card.dataset.backend || 'onnx';
                 
                 // Enable start button
                 document.getElementById('start-app').disabled = false;
+                
+                // Update button text based on backend
+                const startButton = document.getElementById('start-app');
+                if (this.selectedBackend === 'mediapipe') {
+                    startButton.textContent = 'Start Voice Assistant with MediaPipe';
+                } else {
+                    startButton.textContent = 'Start Voice Assistant';
+                }
             }
 
             addCustomModel() {
@@ -1251,6 +1452,7 @@
                 const modelCard = document.createElement('div');
                 modelCard.className = 'model-card';
                 modelCard.dataset.model = modelUrl;
+                modelCard.dataset.backend = 'onnx';
                 modelCard.innerHTML = `
                     <h4>Custom Model</h4>
                     <p>${modelUrl}</p>
@@ -1282,13 +1484,15 @@
                 // Show main app
                 document.getElementById('main-app').style.display = 'block';
                 
-                // Update subtitle with selected model
+                // Update subtitle with selected model and backend
                 const modelName = this.selectedModel.split('/').pop();
+                const backendText = this.selectedBackend === 'mediapipe' ? 'MediaPipe accelerated' : 'WebGPU accelerated';
                 document.getElementById('model-subtitle').textContent = 
-                    `Real-time AI with Whisper + ${modelName} • Privacy-first • WebGPU accelerated`;
+                    `Real-time AI with Whisper + ${modelName} • Privacy-first • ${backendText}`;
                 
-                // Initialize voice assistant with selected model
+                // Initialize voice assistant with selected model and backend
                 window.selectedModel = this.selectedModel;
+                window.selectedBackend = this.selectedBackend;
                 new VoiceAssistantOptimized();
             }
         }

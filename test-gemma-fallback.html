@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemma 3 1B Fallback Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: white;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        .test-button {
+            background: linear-gradient(45deg, #10b981, #3b82f6);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            transform: translateY(-2px);
+        }
+        .log-entry {
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 14px;
+        }
+        .log-info { background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; }
+        .log-success { background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; }
+        .log-warning { background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; }
+        .log-error { background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(100, 116, 139, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #10b981, #3b82f6);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Gemma 3 1B Fallback Test</h1>
+    <p>This test demonstrates the improved fallback mechanism for Gemma 3 1B when MediaPipe is unavailable.</p>
+
+    <div class="test-section">
+        <h2>Test Overview</h2>
+        <ul>
+            <li><strong>Primary:</strong> Try to load Gemma 3 1B via MediaPipe</li>
+            <li><strong>Expected:</strong> MediaPipe will fail (not available in browser)</li>
+            <li><strong>Fallback:</strong> Should automatically switch to SmolLM2-1.7B-Instruct via ONNX</li>
+            <li><strong>Result:</strong> Working model without user intervention</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button class="test-button" onclick="testGemmaFallback()">🚀 Test Gemma 3 1B Fallback</button>
+        <button class="test-button" onclick="clearLogs()">🧹 Clear Logs</button>
+        <button class="test-button" onclick="testFallbackLogic()">🧪 Test Fallback Logic Only</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Progress</h2>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+        <p id="progress-text">Ready to test...</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Log</h2>
+        <div id="test-log"></div>
+    </div>
+
+    <!-- Include Transformers.js CDN for actual model loading -->
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0';
+        
+        // Configure Transformers.js
+        env.allowRemoteModels = true;
+        env.allowLocalModels = false;
+        
+        // Make pipeline available globally
+        window.transformers = { pipeline, env };
+        
+        // Add to log when ready
+        addLog('✓ Transformers.js loaded and ready', 'success');
+    </script>
+
+    <!-- Include our model files -->
+    <script src="mediapipe-llm.js"></script>
+    <script src="model-manager.js"></script>
+
+    <script>
+        let modelManager;
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('test-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateProgress(percentage, message) {
+            const fill = document.getElementById('progress-fill');
+            const text = document.getElementById('progress-text');
+            fill.style.width = percentage + '%';
+            text.textContent = message;
+        }
+
+        function clearLogs() {
+            document.getElementById('test-log').innerHTML = '';
+            updateProgress(0, 'Ready to test...');
+        }
+
+        async function testFallbackLogic() {
+            addLog('🧪 Testing fallback logic without model loading...', 'info');
+            
+            try {
+                // Test the fallback model selection logic
+                const testManager = new ModelManager();
+                
+                // Test Gemma 3 1B mapping
+                const fallbacks = testManager.getFallbackONNXModel('gemma-3-1b-it');
+                addLog(`✓ Gemma 3 1B fallback models: ${JSON.stringify(fallbacks)}`, 'success');
+                
+                // Test MediaPipe model mapping
+                const mapped = testManager.mapToMediaPipeModel('gemma-3-1b-it');
+                addLog(`✓ MediaPipe model mapping: gemma-3-1b-it → ${mapped}`, 'success');
+                
+                // Test other models
+                const gemma7b = testManager.getFallbackONNXModel('gemma-7b-it');
+                addLog(`✓ Gemma 7B fallback: ${JSON.stringify(gemma7b)}`, 'success');
+                
+                addLog('🎉 Fallback logic test completed successfully!', 'success');
+                
+            } catch (error) {
+                addLog(`❌ Fallback logic test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGemmaFallback() {
+            addLog('🚀 Starting Gemma 3 1B fallback test...', 'info');
+            updateProgress(5, 'Initializing test...');
+            
+            try {
+                // Initialize model manager
+                modelManager = new ModelManager();
+                await modelManager.initialize();
+                addLog('✓ Model Manager initialized', 'success');
+                updateProgress(15, 'Model Manager ready');
+
+                // Set up for Gemma 3 1B MediaPipe attempt
+                window.selectedModel = 'gemma-3-1b-it';
+                window.selectedBackend = 'mediapipe';
+                modelManager.config.textgen.modelName = 'gemma-3-1b-it';
+                modelManager.useMediaPipe = true;
+
+                addLog('🎯 Configured for Gemma 3 1B via MediaPipe', 'info');
+                addLog('⚠️  Expected: MediaPipe will fail and fallback to ONNX', 'warning');
+                updateProgress(25, 'Attempting MediaPipe model load...');
+
+                // Attempt to load the model (should fallback)
+                await modelManager.loadModel('textgen', (progress, message) => {
+                    const progressPercent = 25 + (progress * 0.7); // 25-95%
+                    updateProgress(progressPercent, message);
+                    
+                    if (message.includes('MediaPipe')) {
+                        addLog(`📡 MediaPipe: ${message}`, 'info');
+                    } else if (message.includes('fallback') || message.includes('Fallback')) {
+                        addLog(`🔄 ${message}`, 'warning');
+                    } else if (message.includes('SmolLM2') || message.includes('TinyLlama')) {
+                        addLog(`📦 ONNX Loading: ${message}`, 'info');
+                    } else {
+                        addLog(`📊 Progress: ${message}`, 'info');
+                    }
+                });
+
+                updateProgress(100, 'Model loaded successfully!');
+
+                // Get final status
+                const status = modelManager.getAllModelsStatus();
+                const loadedModel = status.textgen;
+
+                addLog('🎉 Model loading completed! Results:', 'success');
+                addLog(`   Backend: ${loadedModel.backend}`, 'success');
+                addLog(`   Model: ${loadedModel.config.modelName}`, 'success');
+                addLog(`   Using MediaPipe: ${status.usingMediaPipe}`, 'success');
+                
+                if (loadedModel.backend === 'onnx' && !status.usingMediaPipe) {
+                    addLog('✅ SUCCESS: MediaPipe failed as expected and fell back to ONNX model', 'success');
+                    
+                    // Verify the fallback model is one of our expected ones
+                    const fallbackModels = [
+                        'HuggingFaceTB/SmolLM2-1.7B-Instruct',
+                        'Xenova/TinyLlama-1.1B-Chat-v1.0',
+                        'HuggingFaceTB/SmolLM2-135M-Instruct'
+                    ];
+                    
+                    if (fallbackModels.includes(loadedModel.config.modelName)) {
+                        addLog('✅ VERIFICATION: Loaded model is one of the expected fallback models', 'success');
+                    } else {
+                        addLog(`⚠️  Unexpected model loaded: ${loadedModel.config.modelName}`, 'warning');
+                    }
+                } else {
+                    addLog('⚠️  Unexpected result: MediaPipe appeared to work or different backend used', 'warning');
+                }
+
+            } catch (error) {
+                addLog(`❌ Test failed: ${error.message}`, 'error');
+                updateProgress(0, 'Test failed');
+                console.error('Full error:', error);
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            addLog('🔧 Gemma 3 1B Fallback Test initialized', 'info');
+            addLog('💡 This test will show that MediaPipe fails gracefully and falls back to working ONNX models', 'info');
+        });
+    </script>
+</body>
+</html>
