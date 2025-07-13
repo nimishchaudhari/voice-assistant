@@ -491,7 +491,7 @@
                     <div class="status-card">
                         <div class="status-title">AI Brain</div>
                         <div class="status-value" id="llm-status">
-                            <span class="loading-indicator"></span> Loading TinyLlama...
+                            <span class="loading-indicator"></span> Loading AI Model...
                         </div>
                     </div>
                     <div class="status-card">
@@ -592,6 +592,35 @@
                 this.initializeApp();
             }
 
+            // Helper function to extract clean display name from model path (same as ModelManager)
+            getModelDisplayName(modelPath) {
+                // Handle different model path formats
+                let displayName = modelPath;
+                
+                // Special handling for quantization suffixes in the path (e.g., "HuggingFaceTB/SmolLM2-135M-Instruct/q4f16")
+                if (displayName.includes('/q4f16')) {
+                    displayName = displayName.replace('/q4f16', '');
+                }
+                if (displayName.includes('/q4')) {
+                    displayName = displayName.replace('/q4', '');
+                }
+                if (displayName.includes('/fp16')) {
+                    displayName = displayName.replace('/fp16', '');
+                }
+                
+                // Remove organization prefix (e.g., "Xenova/", "HuggingFaceTB/")
+                if (displayName.includes('/')) {
+                    displayName = displayName.split('/').pop();
+                }
+                
+                // Clean up common model name patterns
+                displayName = displayName.replace('-Chat-v1.0', '');
+                displayName = displayName.replace('-Instruct', '');
+                displayName = displayName.replace('-v1.0', '');
+                
+                return displayName;
+            }
+
             initializeElements() {
                 this.elements = {
                     voiceButton: document.getElementById('voice-button'),
@@ -679,7 +708,7 @@
                             this.updateProgress(50 + (progress * 0.4)); // 50-90%
                         }
                     });
-                    const modelDisplayName = (window.selectedModel || 'Xenova/TinyLlama-1.1B-Chat-v1.0').split('/').pop();
+                    const modelDisplayName = this.getModelDisplayName(window.selectedModel || 'Xenova/TinyLlama-1.1B-Chat-v1.0');
                     this.updateStatus('llm', `Real ${modelDisplayName} Model Ready ✓`, 'ready');
                     
                 } catch (error) {
@@ -1213,6 +1242,35 @@
                 this.setupEventListeners();
             }
 
+            // Helper function to extract clean display name from model path (same as ModelManager and VoiceAssistant)
+            getModelDisplayName(modelPath) {
+                // Handle different model path formats
+                let displayName = modelPath;
+                
+                // Special handling for quantization suffixes in the path (e.g., "HuggingFaceTB/SmolLM2-135M-Instruct/q4f16")
+                if (displayName.includes('/q4f16')) {
+                    displayName = displayName.replace('/q4f16', '');
+                }
+                if (displayName.includes('/q4')) {
+                    displayName = displayName.replace('/q4', '');
+                }
+                if (displayName.includes('/fp16')) {
+                    displayName = displayName.replace('/fp16', '');
+                }
+                
+                // Remove organization prefix (e.g., "Xenova/", "HuggingFaceTB/")
+                if (displayName.includes('/')) {
+                    displayName = displayName.split('/').pop();
+                }
+                
+                // Clean up common model name patterns
+                displayName = displayName.replace('-Chat-v1.0', '');
+                displayName = displayName.replace('-Instruct', '');
+                displayName = displayName.replace('-v1.0', '');
+                
+                return displayName;
+            }
+
             setupEventListeners() {
                 // Model card selection
                 document.querySelectorAll('.model-card').forEach(card => {
@@ -1283,7 +1341,7 @@
                 document.getElementById('main-app').style.display = 'block';
                 
                 // Update subtitle with selected model
-                const modelName = this.selectedModel.split('/').pop();
+                const modelName = this.getModelDisplayName(this.selectedModel);
                 document.getElementById('model-subtitle').textContent = 
                     `Real-time AI with Whisper + ${modelName} • Privacy-first • WebGPU accelerated`;
                 

@@ -85,6 +85,35 @@ class ModelManager {
         this.currentBackend = bestDevice;
     }
 
+    // Helper function to extract clean display name from model path
+    getModelDisplayName(modelPath) {
+        // Handle different model path formats
+        let displayName = modelPath;
+        
+        // Special handling for quantization suffixes in the path (e.g., "HuggingFaceTB/SmolLM2-135M-Instruct/q4f16")
+        if (displayName.includes('/q4f16')) {
+            displayName = displayName.replace('/q4f16', '');
+        }
+        if (displayName.includes('/q4')) {
+            displayName = displayName.replace('/q4', '');
+        }
+        if (displayName.includes('/fp16')) {
+            displayName = displayName.replace('/fp16', '');
+        }
+        
+        // Remove organization prefix (e.g., "Xenova/", "HuggingFaceTB/")
+        if (displayName.includes('/')) {
+            displayName = displayName.split('/').pop();
+        }
+        
+        // Clean up common model name patterns
+        displayName = displayName.replace('-Chat-v1.0', '');
+        displayName = displayName.replace('-Instruct', '');
+        displayName = displayName.replace('-v1.0', '');
+        
+        return displayName;
+    }
+
     async loadModel(modelName, progressCallback = null) {
         try {
             const config = this.config[modelName];
@@ -101,13 +130,15 @@ class ModelManager {
             
             // Handle quantization path for SmolLM2 models
             let modelPath = config.modelName;
+            const modelDisplayName = this.getModelDisplayName(config.modelName);
+            
             const options = {
                 device: deviceToUse,
                 dtype: config.dtype,
                 progress_callback: (data) => {
                     if (progressCallback && data.progress !== undefined) {
                         const percentage = Math.round(data.progress * 100);
-                        const message = `${data.status || 'Loading'} ${config.modelName}... ${percentage}%`;
+                        const message = `${data.status || 'Loading'} ${modelDisplayName}... ${percentage}%`;
                         progressCallback(percentage, message);
                     }
                 }
@@ -148,7 +179,7 @@ class ModelManager {
                 realModel: true
             });
 
-            if (progressCallback) progressCallback(100, `${modelName} ready! (Real AI model loaded)`);
+            if (progressCallback) progressCallback(100, `${modelDisplayName} ready! (Real AI model loaded)`);
             console.log(`Real ${modelName} model loaded successfully on ${deviceToUse}`);
             return true;
 
