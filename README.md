@@ -1,6 +1,11 @@
 # Voice Assistant POC - Optimized
 
-An optimized browser-based voice assistant demonstrating real-time AI models running entirely client-side with ONNX Runtime Web.
+An optimized browser-based voice assistant with two powerful options:
+
+1. **Local AI Models** (`index.html`) - Privacy-first with ONNX Runtime Web
+2. **🌸 Pollinations AI** (`index-pollinations.html`) - Cloud-powered for better performance
+
+[**→ Try Pollinations AI Version**](index-pollinations.html) | [📖 Pollinations Documentation](README-pollinations.md)
 
 ## Model Optimizations
 
@@ -69,20 +74,34 @@ An optimized browser-based voice assistant demonstrating real-time AI models run
 
 ```
 voice_assistant/
-├── index.html              # Main application with optimized UI
-├── audio-processor.js      # Enhanced audio processing pipeline
-├── model-manager.js        # ONNX model management system
-└── README.md              # This documentation
+├── index.html                     # 🔒 Local AI models version (privacy-first)
+├── index-pollinations.html        # 🌸 Pollinations AI version (cloud-powered)
+├── audio-processor.js             # Shared audio processing pipeline
+├── model-manager.js               # Local ONNX model management
+├── pollinations-model-manager.js  # Pollinations API integration
+├── test-continuous-conversation.html
+├── README.md                      # This documentation
+└── README-pollinations.md         # Pollinations-specific documentation
 ```
 
-## Usage
+## Quick Start
 
-### Local Development
-1. Open `index.html` in a modern browser
-2. Allow microphone permissions when prompted
-3. Wait for models to load (progress shown in status indicators)
-4. Click the microphone button or press Space to start talking
-5. Models will automatically detect the best backend for your hardware
+### Option 1: Pollinations AI (Recommended)
+🌸 **Faster, cloud-powered experience**
+1. Open [`index-pollinations.html`](index-pollinations.html) in your browser
+2. Allow microphone permissions
+3. Click the microphone and start talking
+4. Enjoy fast AI responses + image generation!
+
+### Option 2: Local AI Models (Privacy-focused)
+🔒 **100% local processing**
+1. Open [`index.html`](index.html) in your browser
+2. Wait for models to download and load (2-5 minutes)
+3. Allow microphone permissions  
+4. Choose your preferred language model
+5. Start your voice conversation
+
+**[📖 See detailed comparison and setup guide](README-pollinations.md)**
 
 ### GitHub Pages Deployment
 
